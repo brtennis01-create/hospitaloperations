@@ -1,0 +1,1658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HospitalistOps — Scripps Group Assistant</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;height:100vh;display:flex;align-items:center;justify-content:center}
+.app{display:flex;width:920px;height:660px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 2px 24px rgba(0,0,0,.10);border:1px solid #e5e5e2}
+/* sidebar */
+.sidebar{width:200px;background:#f9f9f7;border-right:1px solid #e5e5e2;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sidebar-header{padding:16px 14px 12px;border-bottom:1px solid #e5e5e2}
+.logo{font-size:13px;font-weight:600;color:#1a1a1a}
+.logo-sub{font-size:11px;color:#888;margin-top:2px}
+.nav-section{padding:12px 14px 4px;font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.08em}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:13px;cursor:pointer;color:#666}
+.nav-item:hover{background:#fff;color:#1a1a1a}
+.nav-item.active{background:#fff;color:#1a1a1a;font-weight:600}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* main */
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.panel{display:none;flex-direction:column;height:100%;overflow:hidden}
+.panel.active{display:flex}
+.ph{padding:12px 16px;border-bottom:1px solid #e5e5e2;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.ph h1{font-size:14px;font-weight:600;flex:1}
+.badge{font-size:11px;padding:2px 8px;border-radius:20px;background:#e8f5e9;color:#2e7d32}
+.badge-blue{font-size:11px;padding:2px 8px;border-radius:20px;background:#e8f0fe;color:#1a56db}
+.reset-btn{font-size:12px;color:#888;background:none;border:none;cursor:pointer;padding:4px 0;font-family:inherit}
+.reset-btn:hover{color:#1a1a1a}
+.pfoot{font-size:11px;color:#aaa;padding:6px 16px;border-top:1px solid #e5e5e2;text-align:center;flex-shrink:0}
+/* shared chat message styles */
+.msgs-wrap{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.msg{display:flex;gap:8px;align-items:flex-start;max-width:94%}
+.msg.user{align-self:flex-end;flex-direction:row-reverse}
+.av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.av.ai{background:#e8f0fe;color:#1a56db}
+.av.user{background:#f0f0ee;color:#666;border:1px solid #e5e5e2}
+.bub{padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.55}
+.msg.ai .bub{background:#f9f9f7;color:#1a1a1a;border-bottom-left-radius:4px}
+.msg.user .bub{background:#e8f0fe;color:#1a3a7a;border-bottom-right-radius:4px}
+.stag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;margin-top:4px;background:#f0f0ee;color:#aaa}
+.dot{width:6px;height:6px;border-radius:50%;background:#bbb;animation:bl 1.2s infinite;display:inline-block;margin:0 2px}
+.dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.2}40%{opacity:1}}
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.chip{font-size:11px;padding:3px 10px;border-radius:20px;border:1px solid #e0e0de;background:#fff;color:#666;cursor:pointer}
+.chip:hover{background:#f5f5f3;color:#1a1a1a}
+/* send row */
+.send-row{display:flex;gap:8px;align-items:flex-end}
+.send-row textarea{flex:1;resize:none;border:1px solid #ddd;border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;line-height:1.4;min-height:34px;max-height:72px;background:#fff;color:#1a1a1a;outline:none}
+.send-row textarea:focus{border-color:#1a56db}
+.sbtn{width:32px;height:32px;border-radius:8px;background:#1a56db;color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sbtn:hover{background:#1446b8}
+/* surge scroll */
+.sscroll{flex:1;overflow-y:auto;padding:16px}
+.sq{font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.sd{font-size:12px;color:#666;margin-bottom:14px;line-height:1.5}
+.rbox{background:#fffbea;border:1px solid #f59e0b;border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:12px;color:#92400e;line-height:1.6}
+.rbox strong{font-weight:600}
+.obtn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid #e0e0de;border-radius:8px;margin-bottom:8px;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:inherit}
+.obtn:hover{background:#f9f9f7}
+.nr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.nr label{font-size:13px;color:#555;min-width:200px}
+.nr input[type=number]{width:72px;padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+.nr input[type=date]{width:150px;padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none}
+.nr input:focus{border-color:#1a56db}
+.gbtn{padding:8px 18px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:inherit;margin-top:6px}
+.gbtn:hover{background:#f5f5f3}
+.crow{display:flex;align-items:flex-start;gap:9px;margin-bottom:10px;font-size:13px;color:#1a1a1a}
+.crow input[type=checkbox]{width:16px;height:16px;cursor:pointer;margin-top:1px;flex-shrink:0}
+.mbox{background:#f5f5f3;border-radius:8px;padding:10px 13px;margin:8px 0 12px;font-size:12px;color:#555;line-height:1.8;font-family:'Courier New',monospace;white-space:pre}
+.res{border-radius:10px;padding:13px 15px;margin-bottom:10px}
+.res.yes{background:#e8f5e9;border:1px solid #a5d6a7}
+.res.no{background:#ffebee;border:1px solid #ef9a9a}
+.res.warn{background:#fffbea;border:1px solid #f59e0b}
+.res.info{background:#e8f0fe;border:1px solid #90b8f8}
+.res h3{font-size:13px;font-weight:600;margin-bottom:5px}
+.res.yes h3{color:#1b5e20}.res.no h3{color:#b71c1c}.res.warn h3{color:#78350f}.res.info h3{color:#1a3a7a}
+.res p{font-size:12px;line-height:1.6;white-space:pre-line}
+.res.yes p{color:#2e7d32}.res.no p{color:#c62828}.res.warn p{color:#92400e}.res.info p{color:#1e40af}
+/* routing */
+.rtabs{display:flex;border-bottom:1px solid #e5e5e2;flex-shrink:0}
+.rtab{flex:1;padding:10px 0;font-size:12px;font-weight:600;text-align:center;cursor:pointer;color:#888;border:none;border-bottom:2px solid transparent;background:none;font-family:inherit}
+.rtab.active{color:#1a56db;border-bottom-color:#1a56db}
+.rpane{display:none;flex:1;flex-direction:column;overflow:hidden;min-height:0}
+.rpane.active{display:flex}
+.rpane-scroll{flex:1;overflow-y:auto;padding:14px}
+.rq{font-size:14px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.rd{font-size:12px;color:#666;margin-bottom:12px;line-height:1.5}
+.rbtn{display:block;width:100%;text-align:left;padding:9px 13px;border:1px solid #e0e0de;border-radius:8px;margin-bottom:7px;background:#fff;color:#1a1a1a;font-size:13px;cursor:pointer;font-family:inherit}
+.rbtn:hover{background:#f5f5f3}
+.vcard{border-radius:10px;padding:13px 15px;margin-bottom:10px}
+.vcard.primary{background:#e8f5e9;border:1px solid #a5d6a7}
+.vcard.specialty{background:#fff3e0;border:1px solid #ffcc80}
+.vcard.consult{background:#e8f0fe;border:1px solid #90b8f8}
+.vcard.warn{background:#fffbea;border:1px solid #f59e0b}
+.vcard h3{font-size:13px;font-weight:600;margin-bottom:5px}
+.vcard.primary h3{color:#1b5e20}.vcard.specialty h3{color:#e65100}.vcard.consult h3{color:#1a3a7a}.vcard.warn h3{color:#78350f}
+.vcard p{font-size:12px;line-height:1.6;white-space:pre-line}
+.vcard.primary p{color:#2e7d32}.vcard.specialty p{color:#bf360c}.vcard.consult p{color:#1e40af}.vcard.warn p{color:#92400e}
+.nbox{background:#f5f5f3;border-radius:8px;padding:10px 13px;margin:6px 0 10px;font-size:12px;color:#555;line-height:1.6}
+/* site banners */
+.site-banner{border-radius:8px;padding:10px 13px;margin-bottom:14px;font-size:12px;font-weight:600}
+.green-banner{background:#e8f5e9;border:1px solid #a5d6a7;color:#1b5e20}
+.memorial-banner{background:#e8f0fe;border:1px solid #90b8f8;color:#1a3a7a}
+.transfer-banner{background:#f5f5f3;border:1px solid #ccc;color:#444}
+.site-rules{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+.site-rule{font-size:11px;font-weight:400;line-height:1.5;padding:5px 8px;border-radius:6px}
+.site-rule.ok{background:rgba(255,255,255,.6)}
+.site-rule.wrong{background:#fff3e0;color:#bf360c}
+.site-rule.neutral{background:rgba(255,255,255,.4);color:#555}
+/* free text routing */
+.ft-input-area{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.ft-input-area textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;line-height:1.6;resize:none;outline:none;color:#1a1a1a;background:#fff}
+.ft-input-area textarea:focus{border-color:#1a56db}
+.ft-btn{padding:9px 20px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;align-self:flex-start}
+.ft-btn:hover{background:#1446b8}
+.ft-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.ft-chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #e0e0de;background:#fff;color:#666;cursor:pointer}
+.ft-chip:hover{background:#f5f5f3;border-color:#1a56db;color:#1a56db}
+.ft-verdict{border-radius:10px;overflow:hidden;border:1px solid #e0e0de;margin-top:8px}
+.ft-verdict-header{padding:12px 15px;font-size:13px;font-weight:600}
+.ft-verdict-header.primary{background:#e8f5e9;color:#1b5e20}
+.ft-verdict-header.specialty{background:#fff3e0;color:#e65100}
+.ft-verdict-header.warn{background:#fffbea;color:#78350f}
+.ft-verdict-body{padding:10px 15px;background:#fafafa}
+.ft-verdict-row{display:flex;gap:8px;padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px;align-items:flex-start}
+.ft-verdict-row:last-child{border-bottom:none}
+.ft-verdict-row .lbl{font-weight:600;color:#555;min-width:70px;flex-shrink:0}
+.ft-verdict-row .val{color:#1a1a1a;line-height:1.5}
+.ft-nuance{background:#fffbea;border-top:1px solid #f59e0b;padding:8px 15px;font-size:11px;color:#92400e;line-height:1.5}
+.ft-no-match{background:#f5f5f3;border-radius:8px;padding:12px 14px;font-size:13px;color:#666;line-height:1.6}
+.ft-confidence{font-size:10px;padding:2px 7px;border-radius:10px;margin-left:8px}
+.ft-confidence.high{background:#e8f5e9;color:#2e7d32}
+.ft-confidence.medium{background:#fffbea;color:#78350f}
+/* QA panel */
+.qa-msgs{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0}
+.qa-chips{display:flex;flex-wrap:wrap;gap:5px;padding:10px 14px 0;flex-shrink:0}
+.qa-chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid #c5d5f5;background:#eef3fd;color:#1a56db;cursor:pointer;font-family:inherit}
+.qa-chip:hover{background:#dce8fb}
+.qa-footer{flex-shrink:0;display:flex;border-top:3px solid #1a56db;background:#fff}
+.qa-footer textarea{flex:1;padding:16px;border:none;font-size:14px;font-family:inherit;line-height:1.5;resize:none;outline:none;color:#1a1a1a;background:#fff;height:80px}
+.qa-footer textarea::placeholder{color:#aaa}
+.qa-ask{width:90px;background:#1a56db;color:#fff;border:none;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em;flex-shrink:0}
+.qa-ask:hover{background:#1446b8}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">🏥 HospitalistOps</div>
+      <div class="logo-sub">Scripps Group Assistant</div>
+    </div>
+    <div class="nav-section">Tools</div>
+    <div class="nav-item active" id="nav-qa" onclick="show('qa')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Operations Q&amp;A
+    </div>
+    <div class="nav-item" id="nav-day" onclick="show('day')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> Daytime surge
+    </div>
+    <div class="nav-item" id="nav-pm" onclick="show('pm')">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> PM surge trial
+    </div>
+    <div class="nav-item" id="nav-route" onclick="show('route')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/></svg> Patient routing
+    </div>
+    <div class="nav-item" id="nav-onboard" onclick="show('onboard')">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Onboarding
+    </div>
+    <div class="nav-item" id="nav-help" onclick="show('help')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> How to use
+    </div>
+    <div class="nav-section">Quick reference</div>
+    <div class="nav-item" onclick="show('route');setTimeout(()=>gPick('ortho'),50)">
+      <svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg> Orthopedics
+    </div>
+    <div class="nav-item" onclick="show('route');setTimeout(()=>gPick('gsurg'),50)">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> General surgery
+    </div>
+    <div class="nav-item" onclick="show('route');setTimeout(()=>gPick('cardio'),50)">
+      <svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> Cardiology
+    </div>
+    <div class="nav-item" onclick="show('route');setTimeout(()=>gPick('bmt'),50)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg> BMT / Oncology
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- PATIENT ROUTING -->
+    <div class="panel" id="panel-route">
+      <div class="ph">
+        <h1>Patient routing</h1>
+        <span class="badge-blue">Co-mgmt docs loaded</span>
+        <button class="reset-btn" id="rreset" onclick="resetRoute()" style="display:none">↺ Restart</button>
+      </div>
+      <div class="rtabs">
+        <button class="rtab active" id="rtab-guided" onclick="switchRTab('guided')">🗺 Guided flow</button>
+        <button class="rtab" id="rtab-freetext" onclick="switchRTab('freetext')">💬 Describe patient</button>
+      </div>
+      <div class="rpane active" id="rpane-guided">
+        <div class="rpane-scroll"><div id="guided"></div></div>
+      </div>
+      <div class="rpane" id="rpane-freetext">
+        <div class="rpane-scroll">
+          <div class="ft-input-area">
+            <textarea id="ft-input" rows="3" placeholder="e.g. 72M hip fracture at Green&#10;e.g. 65F acute cholecystitis at Green 11pm&#10;e.g. 68M NSTEMI rising troponins" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();analyzeText()}"></textarea>
+            <button class="ft-btn" onclick="analyzeText()">→ Get recommendation</button>
+          </div>
+          <div id="ft-result"></div>
+          <p style="font-size:11px;color:#aaa;margin-bottom:8px">Or tap a common scenario:</p>
+          <div class="ft-chips">
+            <span class="ft-chip" onclick="ftFill('72M hip fracture at Green')">Hip fracture at Green</span>
+            <span class="ft-chip" onclick="ftFill('65F acute cholecystitis at Green 11pm')">Cholecystitis overnight</span>
+            <span class="ft-chip" onclick="ftFill('58M neutropenic fever known lymphoma')">Neutropenic fever</span>
+            <span class="ft-chip" onclick="ftFill('68M NSTEMI rising troponins Memorial')">NSTEMI</span>
+            <span class="ft-chip" onclick="ftFill('70F new onset heart failure Green ED')">New onset CHF at Green</span>
+            <span class="ft-chip" onclick="ftFill('75F POD 21 hip replacement pneumonia')">Post-op pneumonia</span>
+            <span class="ft-chip" onclick="ftFill('60M acute limb ischemia')">Acute limb ischemia</span>
+            <span class="ft-chip" onclick="ftFill('55F 28 weeks pregnant pneumonia Memorial')">Pregnant with pneumonia</span>
+            <span class="ft-chip" onclick="ftFill('72M elective total knee replacement Green')">Elective knee at Green</span>
+            <span class="ft-chip" onclick="ftFill('70M SBO small bowel obstruction Green')">SBO at Green</span>
+            <span class="ft-chip" onclick="ftFill('POD 10 hip replacement wound infection Green')">Post-op wound infection</span>
+            <span class="ft-chip" onclick="ftFill('63F multiple myeloma relapse treatment')">Myeloma relapse</span>
+          </div>
+        </div>
+      </div>
+      <div class="pfoot">📋 Based on your co-management agreements · Always use clinical judgment</div>
+    </div>
+
+    <!-- OPERATIONS Q&A -->
+    <div class="panel active" id="panel-qa">
+      <div class="ph"><h1>Operations Q&amp;A</h1><span class="badge">5 docs loaded</span></div>
+      <div class="qa-chips">
+        <span class="qa-chip" onclick="qaAsk('What time does my shift start and end for each shift type?')">Shift hours</span>
+        <span class="qa-chip" onclick="qaAsk('How do I qualify for shift extension and how much does it pay?')">Shift extension</span>
+        <span class="qa-chip" onclick="qaAsk('How does AM patient distribution work?')">AM distribution</span>
+        <span class="qa-chip" onclick="qaAsk('Do I cross cover when I am on PM shift?')">PM cross cover</span>
+        <span class="qa-chip" onclick="qaAsk('How do I activate jeopardy coverage?')">Jeopardy</span>
+        <span class="qa-chip" onclick="qaAsk('What are the direct admission criteria?')">Direct admissions</span>
+        <span class="qa-chip" onclick="qaAsk('How does the ICU hold list work?')">ICU hold list</span>
+        <span class="qa-chip" onclick="qaAsk('What do I do when I exceed my admission capacity on PM shift?')">Exceed capacity</span>
+        <span class="qa-chip" onclick="qaAsk('How much does surge pay and what is the standby fee?')">Surge pay</span>
+        <span class="qa-chip" onclick="qaAsk('What is my responsibility on the JADE team?')">JADE team</span>
+      </div>
+      <div class="qa-msgs" id="qa-msgs">
+        <div class="msg ai"><div class="av ai">H</div><div>
+          <div class="bub">Ask me anything about SCMG operations — shift hours, patient caps, distribution, direct admissions, cross cover, jeopardy, shift extension, Epic workflows, and more. All five operations documents are loaded.</div>
+          <span class="stag">📋 Powered by your operations documents</span>
+        </div></div>
+      </div>
+      <div class="qa-footer">
+        <textarea id="qa-input" placeholder="Type your question and press Enter or tap Ask…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();qaSend()}"></textarea>
+        <button class="qa-ask" onclick="qaSend()">Ask</button>
+      </div>
+      <div class="pfoot">📋 Based on your operations documents · Confirm policy changes with division leadership</div>
+    </div>
+
+    <!-- ONBOARDING -->
+    <div class="panel" id="panel-onboard">
+      <div class="ph"><h1>New hospitalist onboarding</h1><span class="badge">Onboarding doc loaded</span></div>
+      <div class="sscroll">
+
+        <div class="res info" style="margin-bottom:16px">
+          <h3>👋 Welcome to the Scripps Hospitalist Group!</h3>
+          <p>This section covers everything you need to get started. Tap a section below or scroll through.</p>
+        </div>
+
+        <!-- NEW HIRE CHECKLIST -->
+        <div class="sq">✅ New hire checklist</div>
+        <div class="sd">Make sure all of these are completed before your first shift.</div>
+        <div class="nbox" style="line-height:2">
+          ☐ Badge and Epic access<br>
+          ☐ Parking lot access<br>
+          ☐ Free food LJ access<br>
+          ☐ Onboarding meeting with division member (where to park, where the office is, etc.)<br>
+          ☐ Email access<br>
+          ☐ Microsoft Teams access<br>
+          ☐ Pick chart meeting invite<br>
+          ☐ Info about monthly division meetings<br>
+          ☐ AMION access (password: <strong>7909</strong>)<br>
+          ☐ Quality projects (CHF, PNA, COPD, 10/12/2)
+        </div>
+
+        <!-- WHAT GOES WHERE -->
+        <div class="sq" style="margin-top:16px">🏥 What goes where?</div>
+        <div class="sd">Which hospital handles which specialties.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="res info"><h3>🏨 Scripps Memorial / La Jolla</h3><p>• Neuro IR
+• CT Surgery
+• Cardiology
+• General Surgery
+• OB/GYN
+• Coronary CT and Lexiscan (only available here)</p></div>
+          <div class="res yes"><h3>🏥 Scripps Green</h3><p>• Heme/Onc
+• ENT
+• Urology
+• Hepatology
+• BMT / Red Team</p></div>
+        </div>
+
+        <!-- MEETINGS -->
+        <div class="sq" style="margin-top:4px">📅 Regular meetings</div>
+        <div class="sd">Both are on Microsoft Teams. Links will be in your calendar.</div>
+        <div class="nbox">
+          <strong>Pick Chart — every Tuesday at noon</strong><br>
+          Reviews division updates, quality projects, and OFIs (Opportunities for Improvement). Attend when on service if possible. Sometimes followed by an operations discussion.<br><br>
+          <strong>Division Meeting — last Tuesday of the month at noon</strong><br>
+          Replaces Pick Chart that week. Held on Teams, occasionally in person. <strong>50% attendance required.</strong>
+        </div>
+
+        <!-- DIVISION WEBSITE -->
+        <div class="sq" style="margin-top:16px">🌐 Division website</div>
+        <div class="nbox">
+          <a href="https://sites.google.com/site/scrippshm/home/" target="_blank" style="color:#1a56db">https://sites.google.com/site/scrippshm/home/</a>
+        </div>
+
+        <!-- TEAMS FILES -->
+        <div class="sq" style="margin-top:16px">💻 Finding shift guidelines on Teams</div>
+        <div class="nbox">
+          Teams → <strong>Green Hospitalists</strong> → <strong>Work Guidelines</strong> → Files<br><br>
+          • Files starting with <strong>A</strong> = Day shift guidelines<br>
+          • Files starting with <strong>B</strong> = PM shift guidelines<br>
+          • Files starting with <strong>C</strong> = Night shift guidelines<br><br>
+          For co-management agreements: Teams → Work Guidelines → <strong>Co-management</strong> → Files
+        </div>
+
+        <!-- IMPORTANT NUMBERS -->
+        <div class="sq" style="margin-top:16px">📞 Important numbers</div>
+        <div class="nbox" style="font-size:12px;line-height:2.1">
+          <strong>AMION password:</strong> 7909<br>
+          <strong>Residents (Green):</strong> ScrippsIM<br>
+          <strong>Doctors line (Green internal):</strong> 354-7999<br>
+          <strong>Doctors line (outside):</strong> 858-554-7909<br>
+          <strong>LJ ED (internal):</strong> 321-8151 &nbsp;|&nbsp; <strong>Outside:</strong> 858-824-8151<br>
+          <strong>UCC Green:</strong> 354-8638 &nbsp;|&nbsp; 858-554-8638<br>
+          <strong>RBUCC:</strong> (858) 605-7994<br>
+          <strong>Transfer Center:</strong> (858) 678-6205<br>
+          <br>
+          <strong>Office door codes:</strong><br>
+          Green hospitalist office: <strong>7909</strong><br>
+          Browning LJ hospitalist office: <strong>54312</strong><br>
+          Call room Green: <strong>2468</strong><br>
+          Call room LJ: <strong>1234</strong><br>
+          Resident room LJ: <strong>6565*</strong><br>
+          <br>
+          <strong>Nursing units (Green):</strong><br>
+          3W: 354-2300 &nbsp;|&nbsp; 4N: 354-4400 &nbsp;|&nbsp; 3N: 354-2870 &nbsp;|&nbsp; 4W: 354-2400<br>
+          Tele Green: 354-2343<br>
+          <br>
+          <strong>Nursing units (Memorial):</strong><br>
+          Tele 6th floor: 321-8656 &nbsp;|&nbsp; Tele 7th floor: 321-8657<br>
+          <br>
+          <strong>Radiology Green:</strong> 354-2626<br>
+          <strong>IR doc office Green:</strong> 354-2628<br>
+          <br>
+          <strong>MDH Teams room code (Green &amp; Memorial):</strong> 2046
+        </div>
+
+        <!-- KEY CONTACTS -->
+        <div class="sq" style="margin-top:16px">👥 Key contacts</div>
+        <div class="nbox">
+          <strong>Karen Yegella</strong> — Administrative, Scripps Green. Ortho co-management distribution, MDH invites.<br><br>
+          <strong>Ericka Martin</strong> — Green and Memorial. Surge sign-ups, shift extensions, Epic inbox coverage, daily numbers reminders.<br><br>
+          <strong>Liesbet Joris Quinton (LJQ)</strong> — Division head, Green and Memorial. Contact if you cannot work a scheduled day.<br><br>
+          <strong>Farhad Shadan</strong> — Division head, Scripps Memorial.
+        </div>
+
+      </div>
+      <div class="pfoot">📋 Based on your onboarding document · Last updated 6/9/26</div>
+    </div>
+
+    <!-- HOW TO USE -->
+    <div class="panel" id="panel-help">
+      <div class="ph"><h1>How to use this tool</h1><span class="badge-blue">Tips &amp; feedback</span></div>
+      <div class="sscroll">
+
+        <div class="res info" style="margin-bottom:16px">
+          <h3>🎯 What this tool does</h3>
+          <p>This assistant is built from your group's official documents — co-management agreements, surge protocols, shift guidelines, and onboarding materials. It gives you fast, policy-grounded answers at the point of care. It is a reference tool, not a substitute for clinical judgment or direct communication with colleagues.</p>
+        </div>
+
+        <!-- THE 5 TOOLS -->
+        <div class="sq">🗂 The five tools</div>
+        <div class="sd">Each tab is built for a specific task.</div>
+
+        <div class="nbox" style="margin-bottom:8px">
+          <strong>💬 Operations Q&A</strong><br>
+          Ask anything about shift operations in plain language. Best for: shift hours, patient caps, cross cover, jeopardy, ICU hold list, direct admissions, JADE team, Epic workflows, surge pay, and more.<br>
+          <em style="color:#888;font-size:11px">Tip: tap a chip to try a common question first.</em>
+        </div>
+        <div class="nbox" style="margin-bottom:8px">
+          <strong>☀️ Daytime surge &amp; 🌙 PM surge trial</strong><br>
+          Step-by-step calculators that walk you through the exact surge algorithm. Enter your numbers and get a yes/no with the math shown. Use these when deciding whether to call in surge — they remove the guesswork.
+        </div>
+        <div class="nbox" style="margin-bottom:8px">
+          <strong>🗺 Patient routing</strong><br>
+          Two ways to determine site (Green vs Memorial) and service attribution (hospitalist primary, specialty primary, or consult):<br>
+          • <strong>Guided flow</strong> — tap through specialty → scenario → verdict. Best for straightforward cases.<br>
+          • <strong>Describe patient</strong> — type a free-text description and get an instant recommendation. Best for complex or atypical cases.<br>
+          <em style="color:#888;font-size:11px">Tip: site selection always comes first — the tool will flag if a patient is at the wrong site.</em>
+        </div>
+        <div class="nbox" style="margin-bottom:14px">
+          <strong>📋 Onboarding</strong><br>
+          New hire checklist, phone numbers, door codes, meeting schedules, and division website. Share this with new group members on their first day.
+        </div>
+
+        <!-- HOW TO ASK GOOD QUESTIONS -->
+        <div class="sq" style="margin-top:4px">💡 How to ask questions that get the best answers</div>
+        <div class="sd">The more context you give, the more precise the answer.</div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
+          <div class="nbox">
+            <strong>✓ Include the site</strong><br>
+            <span style="color:#2e7d32">Good: "72M hip fracture at Green — who is primary?"</span><br>
+            <span style="color:#c62828">Vague: "hip fracture — who admits?"</span>
+          </div>
+          <div class="nbox">
+            <strong>✓ Include post-op day for surgical patients</strong><br>
+            <span style="color:#2e7d32">Good: "POD 10 hip replacement with wound infection at Green"</span><br>
+            <span style="color:#c62828">Vague: "post-op hip patient with infection"</span>
+          </div>
+          <div class="nbox">
+            <strong>✓ Include the time for time-sensitive questions</strong><br>
+            <span style="color:#2e7d32">Good: "acute cholecystitis at Green at 11pm — who admits?"</span><br>
+            <span style="color:#c62828">Vague: "cholecystitis at Green"</span>
+          </div>
+          <div class="nbox">
+            <strong>✓ Be specific about the clinical scenario</strong><br>
+            <span style="color:#2e7d32">Good: "58M with lymphoma, neutropenic fever, no hematologic issue — Green or Memorial?"</span><br>
+            <span style="color:#c62828">Vague: "oncology patient with fever"</span>
+          </div>
+          <div class="nbox">
+            <strong>✓ For surge questions, give your numbers</strong><br>
+            <span style="color:#2e7d32">Good: "6 hospitalists on service including Red Team, census 75 at Green — can I call surge?"</span><br>
+            <span style="color:#c62828">Vague: "can I call surge today?"</span>
+          </div>
+        </div>
+
+        <!-- LIMITATIONS -->
+        <div class="sq" style="margin-top:4px">⚠️ Important limitations</div>
+        <div class="res warn" style="margin-bottom:14px">
+          <h3>Always use clinical judgment</h3>
+          <p>• This tool reflects your group's policies as written in the source documents. Policies evolve — when in doubt, confirm with a colleague or division leadership.
+• Grey areas exist in every co-management agreement. The tool will flag them and suggest direct physician-to-physician communication.
+• For urgent clinical decisions, call the relevant attending directly — don't rely solely on this tool.
+• This tool does not have access to real-time census data, EMR, or patient information.</p>
+        </div>
+
+        <!-- FEEDBACK -->
+        <div class="sq" style="margin-top:4px">📬 Send feedback on an answer</div>
+        <div class="sd">If you receive an answer that seems wrong, incomplete, or outdated — please report it so it can be reviewed and corrected.</div>
+
+        <div id="feedback-form">
+          <div class="nbox" style="margin-bottom:10px">
+            <strong>What section was the answer in?</strong>
+            <select id="fb-section" style="display:block;width:100%;margin-top:6px;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none">
+              <option value="">Select a section…</option>
+              <option>Operations Q&amp;A</option>
+              <option>Patient routing — Guided flow</option>
+              <option>Patient routing — Describe patient</option>
+              <option>Daytime surge calculator</option>
+              <option>PM surge calculator</option>
+              <option>Onboarding</option>
+            </select>
+          </div>
+          <div class="nbox" style="margin-bottom:10px">
+            <strong>What did you ask or what scenario were you looking at?</strong>
+            <textarea id="fb-question" rows="2" style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;resize:none;outline:none" placeholder="e.g. I asked about admitting cholecystitis at Green at 10pm…"></textarea>
+          </div>
+          <div class="nbox" style="margin-bottom:10px">
+            <strong>What was wrong or missing about the answer?</strong>
+            <textarea id="fb-issue" rows="3" style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;resize:none;outline:none" placeholder="e.g. The tool said GSURG primary but our protocol changed in June 2026…"></textarea>
+          </div>
+          <div class="nbox" style="margin-bottom:12px">
+            <strong>Your name (optional)</strong>
+            <input id="fb-name" type="text" style="display:block;width:100%;margin-top:6px;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none" placeholder="e.g. Dr. Smith">
+          </div>
+          <button onclick="submitFeedback()" style="width:100%;padding:11px;background:#1a56db;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit">📬 Submit feedback</button>
+          <div id="fb-result" style="margin-top:10px"></div>
+        </div>
+
+      </div>
+      <div class="pfoot">Feedback is emailed directly to brtennis01@gmail.com for review</div>
+    </div>
+
+    <!-- DAYTIME SURGE -->
+    <div class="panel" id="panel-day">
+      <div class="ph"><h1>Daytime surge activation</h1><button class="reset-btn" onclick="resetDay()">↺ Restart</button></div>
+      <div class="sscroll" id="dc"></div>
+      <div class="pfoot">⏰ Surge must be called in by 8:00 AM</div>
+    </div>
+
+    <!-- PM SURGE -->
+    <div class="panel" id="panel-pm">
+      <div class="ph"><h1>PM surge trial (starts 6/16/26)</h1><button class="reset-btn" onclick="resetPM()">↺ Restart</button></div>
+      <div class="sscroll" id="pc"></div>
+      <div class="pfoot">⏰ Call-in window: 5:00 PM – 7:30 PM · Shift ends 10:00 PM</div>
+    </div>
+
+  </div>
+</div>
+<script>
+// ── CONFIG ──
+const API_KEY = 'proxy';  // API calls go through secure server proxy
+
+// ── PANEL SWITCHING ──
+function show(name) {
+  ['qa','day','pm','route','onboard','help'].forEach(n => {
+    document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
+    document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
+  });
+  if (name==='day') renderDay();
+  if (name==='pm') renderPM();
+  if (name==='route') renderGuided();
+}
+
+function switchRTab(tab) {
+  ['guided','freetext'].forEach(t => {
+    document.getElementById('rtab-'+t).className = 'rtab'+(t===tab?' active':'');
+    document.getElementById('rpane-'+t).className = 'rpane'+(t===tab?' active':'');
+  });
+  document.getElementById('rreset').style.display = tab==='guided' && gS.step!==0 ? 'inline' : 'none';
+}
+
+// ── SHARED HELPERS ──
+function addMsg(containerId, role, text, src) {
+  const c = document.getElementById(containerId);
+  const d = document.createElement('div'); d.className='msg '+role;
+  const av = document.createElement('div'); av.className='av '+role; av.textContent=role==='ai'?'H':'You';
+  const inner = document.createElement('div');
+  const bub = document.createElement('div'); bub.className='bub'; bub.innerHTML=text.replace(/\n/g,'<br>');
+  inner.appendChild(bub);
+  if (src) { const s=document.createElement('span'); s.className='stag'; s.textContent=src; inner.appendChild(s); }
+  d.appendChild(av); d.appendChild(inner); c.appendChild(d);
+  setTimeout(()=>{ c.scrollTop=c.scrollHeight; },50);
+}
+function showTyping(containerId, id) {
+  const c=document.getElementById(containerId);
+  const d=document.createElement('div'); d.className='msg ai'; d.id=id;
+  d.innerHTML='<div class="av ai">H</div><div class="bub"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+  c.appendChild(d); setTimeout(()=>{ c.scrollTop=c.scrollHeight; },50);
+}
+function removeTyping(id) { const t=document.getElementById(id); if(t) t.remove(); }
+function rz(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,72)+'px'; }
+
+async function callAPI(system, msgs) {
+  const r = await fetch('/api/chat', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:800,system,messages:msgs})
+  });
+  const d = await r.json();
+  if (d.error) throw new Error(d.error.message);
+  return d.content.map(b=>b.text||'').join('');
+}
+
+// ── OPERATIONS Q&A ──
+const OPS_SYSTEM = `You are the operations assistant for the SCMG (Scripps Care Medical Group) Hospitalist Division at Scripps Green and Scripps Memorial hospitals in La Jolla, CA. Answer questions accurately based on the division's official operations documents. Label answers from documents "📋 From your division's guidelines:" and general medical knowledge "💡 General practice:". Be concise and practical — hospitalists are busy.
+
+SHIFT DEFINITIONS:
+- Dayshift: 7am–5pm. Take secure chats on your patients until 9pm. Be in hospital until at least 3pm. Primarily rounding with some admitting responsibilities.
+- Swing/PM1 (Non-teach): 12pm–8pm. Admitting shift. On pager call 12–5pm. No routine cross cover. Max 8 admits.
+- Swing/PM2 (Non-teach): 4pm–midnight. Admitting shift. On pager call 5–10pm. Max 8 admits.
+- Teach PM: 3pm–11pm. Calls for new admissions 3–9pm. Cross covers own patients until 11pm. Max 8 patients.
+- Night shift (HS): 9pm–7am. Admitting and cross cover. Last admit by 6:30am. Max 7 admits at non-teach, 8 at teach.
+- Surge dayshift: Voluntary. $300 standby fee. $1900 weekday / $2100 weekend. See 10 patients (up to 13 voluntary, $200/patient for 11-13).
+- Surge PM: Voluntary. $500 standby fee. 5–10pm Mon–Fri. $250/admit. Min 3, expected 4, max 5.
+- Jeopardy: Assigned ~once/month. Available for day/evening/night coverage if someone is sick. One shift only — cannot cover two shifts same day.
+- Shift extension: Extra pay when you exceed max patient volume. $200/admit after cap.
+
+HOSPITAL SITES:
+- Scripps Green: Focus on orthopedics, oncology, hepatology.
+- Scripps Memorial: Focus on cardiology, general surgery, gynecology.
+- 4 resident teams alternating every 6 months: June 16–Dec 16 at Memorial; Dec 17–June 15 at Green.
+- Night float at same site as day residents.
+
+STAFFING MODEL — TEACH SITE:
+- 4 teaching teams: 3 teams (1 resident + 2 interns) can see up to 18 patients; 1 team (resident only) up to 14 patients.
+- Non-teach teams (2–4): max 14 patients.
+- One PM shift (3–11pm): calls 3–9pm, in hospital until 11pm, max 8 patients.
+- One nocturnist: on call 9pm–7am, max 8 admits.
+
+STAFFING MODEL — NON-TEACH SITE:
+- All teams (6–8) non-teach: max 14 patients.
+- PM1 (noon): pager call until 5pm, in hospital until 8pm, max 8.
+- PM2 (4pm): pager call 5pm–10pm, in hospital until midnight, max 8.
+- Night shift: 9pm, pager call 10pm–7am, max 8.
+
+KEY CONTACTS:
+- Karen Yegella: Administrative, at Green. Distributes ortho co-management patients Mon–Fri.
+- Ericka Martin: Green and Memorial. Sign up for surge shifts, shift extension requests.
+- Liesbet Joris Quinton (LJQ): Division head, Green and Memorial. Contact if unable to work a scheduled day.
+- Farhad Shadan: Division head, Memorial.
+
+DAYSHIFT GUIDELINES:
+- Arrive 7am. Sign into charts of all patients by 7:30am. On-call distribution completed by 7:00am.
+- Teaching team rounds at 9:30am.
+- Green MDH (Multi-Disciplinary Huddle): 10:30–11:30am on Microsoft Teams. Contact Karen Yegella for invite. Code: 2046.
+- Memorial MDH: No longer held. Update EDD in Epic on all patients by 1pm.
+- Expected census: non-teach 12–14; resident-only team 13–15; full teaching team 14–18.
+- Cross cover own patients until 9pm. Give verbal sign out to nocturnist at 9pm about sick patients.
+- Place daily numbers in Green/Memorial Daily Numbers spreadsheet in Teams.
+- Check in with PM person before leaving for the day.
+
+PM SHIFT GUIDELINES:
+- PM1 (Swing 1, Non-teach): Arrives noon. Pager call 12–5pm. Assign up to 2 patients to Swing 2 by 5pm. Last admit 6:30pm. Max 8.
+- PM2 (Swing 2, Non-teach): Arrives 4pm. Pager call 5–10pm. Receives up to 2 admits from Swing 1 between 4–5pm. Last admit 10pm. Max 8.
+- PM cross cover: PM hospitalist handles issues on their admitted patients until 11pm. After 11pm → nocturnist.
+- Log into Haiku/Secure chat and set availability until 11pm so nurses know they can message until then.
+- Confer with nocturnist at 9pm (teach) or 10pm (non-teach) about pending transfers and patients needing help.
+- PM shift only expected to see one transfer admission between 9–10pm.
+- When new admissions received: place on GREEN or LJ PMHS List. Add sign out in To Do column in Epic.
+- In sign out indicate: admitted with residents or not, team color, if good for JADE/Red, consults called, complexity level, good for surge or not.
+
+PM CAPACITY / REPATRIATION:
+- Max PM capacity is 8 patients, except if 4+ new admissions arrive on site after 8pm.
+- For CTC repatriation requests: capacity = 6 patients if no/minimal house-staff capacity; 7 if house-staff capacity in-house; or 4+ on site with up to 2 on way (ETA within 30 min).
+- Cannot refuse admits at TPUC or LJED for capacity but can ask to hold patient in ED/UCC until caught up.
+- Email LJQ and Dan Dworsky (Green) or Farhad Shadan and LJQ (Memorial) with time of repatriation request and patient list screenshot.
+
+NIGHT SHIFT (HS) GUIDELINES:
+- Arrives 9pm. Pager call: 10pm–7am non-teach; 9pm–7am teach.
+- Check with PM hospitalist or night float at 9pm for available spots.
+- Place new admissions on GREEN or LJ PMHS List. Add sign out in To Do in Epic.
+- Sign out should include: residents or not, team color, good for house-staff or non-teach, complexity level, consults called, good for surge or not.
+- Cross cover: record all events in To Do column in Epic. Title entries "XC". Place above patient sign out. Chronological order.
+- Record in To Do: afib meds, fluid boluses, hypo-Na management, escalating pain meds, new/changed abx, new imaging.
+- Do NOT record: one-time nausea/sleep aid/antipyretics/restraint renewals/hypertension meds/insulin.
+- Major events (death, code blue, STEMI, new stroke/seizure): call day hospitalist directly at 7am AND write Significant Event Note in Epic.
+- Night float resident co-signs significant event notes by nocturnist. If ICU involved, resident sends to ICU attending.
+- At 7am confer with day on-call about pending transfers and patients needing help.
+
+SHIFT EXTENSION:
+- PM shift (both sites): $200/admit after 8 patients.
+- HS teach site: $200/admit after 8 patients.
+- HS non-teach site: $200/admit after 7 patients.
+- Surge: voluntary option to see up to 13 patients. $200/patient for patients 11, 12, 13. Ericka reaches out individually.
+- Daytime non-teach: $200/admit after 2pm if hospitalist has already seen 13+ patients that day.
+- Contact Ericka Martin to arrange shift extension.
+
+DIRECT ADMISSIONS — CRITERIA:
+Candidates FOR direct admission: Seen in clinic/outpatient on the day of admission request. Stable vitals (HR 50–120, BP >100 systolic, RR 10–26, O2 sat >90% on ≤2L). Stable labs/imaging not requiring triage.
+NOT candidates: Patients at home or not seen that day. Abnormal labs/imaging (leukocytosis, complicated diverticulitis, elevated K+, elevated troponin). Unstable vitals. Need urgent/emergent labs or imaging. Need another service as primary (BMT, Onc, Hep, Surgery).
+Workflow: Outpatient MD calls inpatient logistics for bed. Direct discussion between hospitalist and outpatient MD about unit (med/surg vs tele).
+
+ICU HOLD LIST:
+- When patient transfers to ICU, remove from your list and place on Green or Memorial ICU Hold List.
+- In To Do column: indicate which team patient was on and if house staff were involved.
+- Do NOT distribute ICU hold patients to day team during overnight distribution.
+- When ICU calls patient out (stable for transfer): take off ICU hold list and assign to a team. ICU responsible for care until patient physically leaves ICU.
+- ICU responsible for finalized transfer orders and alerting on-call hospitalist when patient physically leaves.
+- Patients called out during day (7am–4pm): assigned and seen by daytime team. Write ICU accept note, submit level 1 bill. See and write note even if patient hasn't physically left ICU.
+- Patients called out during PM/night (4pm–7am): seen, accept note written, level 1 bill submitted. Exception: if PM/HS has >7 patients on list (or >14 if two swing teams).
+- Include in notes: "Please contact ICU team for orders or questions about patient care until they have left the ICU."
+
+AM PATIENT DISTRIBUTION:
+- On-call hospitalist distributes all patients on PM/HS list to day hospitalists by 7:00am.
+- Places patients on each physician's daily list and updates attending.
+- Add appropriate attending to treatment team as consultant if hospitalist is not primary.
+- On-call hospitalist updates Teams daily numbers with total census and team census each morning.
+- Not expected to inform other hospitalists/residents about teaching service admissions.
+
+CONSULTING SIGN-IN/OUT:
+- When consulting, sign into the treatment team.
+- Clicking the consult order when writing a note auto-adds you to treatment team.
+- When picking up a consult from overnight: add yourself, remove previous consulting hospitalist.
+- When going off service: indicate in note which hospitalist will take over.
+
+ED/UCC COMMUNICATION:
+- New admissions/consults: send on-call hospitalist a secure chat with patient info attached.
+- Hospitalist responds within 15 minutes. If unavailable, send secure chat acknowledging admit and plan.
+- If no response in 15 minutes: ED/UCC physician calls hospitalist cell directly (listed in Epic).
+- After initial contact: updates via secure chat unless critical (status change requiring higher level of care).
+
+EPIC INBOX COVERAGE:
+- Pink Team hospitalist manages Epic inbox of providers who are unavailable.
+- Provider who will be absent must: identify Pink Team hospitalists on service during absence, email them + Ericka with request and time away, grant Epic inbox access, remove access upon return.
+- Covering hospitalist only responsible for viewing results inbox once daily for critical/time-sensitive issues. Other inbox tasks (orders, CDI, notes) are NOT covering hospitalist's responsibility.
+- Include Ericka in coverage email so she can notify Health Information — prevents penalization for late charts.
+
+PATIENT EMAILS/TEXTS POST-DISCHARGE:
+- All texts/emails from patients must be addressed.
+- Do NOT respond via text or email — all communication must be documented in medical record.
+- Call patient by phone to address concerns.
+- Create telephone encounter in Epic to document.
+- Route closed telephone encounter to PCP and relevant outpatient physicians.
+
+ORTHO CO-MANAGEMENT DISTRIBUTION (Non-teach Green):
+- Karen distributes ortho co-management patients Monday–Friday.
+- Each daytime team sees one new ortho patient per day.
+- Distribution prioritized by expected time out of OR.
+- PM1/PM2 handle remainder (max 3 each). Overflow to HS nocturnist.
+- PM/HS max 3 ortho consults per shift.
+- Spine ortho patients can be done with HS (day team or night float).
+
+JADE TEAM (Memorial):
+- Attends trauma rounds in person or Teams at 8am daily, 5th floor Browning across from call room. Room code: 2046.
+- Takes trauma patients from overnight on-call hospitalist each morning.
+- Takes new trauma admits/consults until 3pm, 7 days a week.
+- Max 12 patients after AM distribution (to leave room for new consults).
+- Hospital medicine consults between 7am–3pm go to JADE (up to 15 patients max). Overflow to PM hospitalist.
+- If JADE approaches 13–14, offload medical patients to other teams.
+- End of week: JADE offloads non-trauma patients to other teams; other teams can offload trauma cases to JADE.
+
+RED TEAM (Green):
+- Dedicated to seeing patients on the bone marrow transplant team at Scripps Green.
+
+DAILY NUMBERS TRACKING:
+- On-call/triage hospitalist at each site obtains daily patient numbers from all daytime hospitalists and enters into Microsoft Teams Excel tracking sheet.
+- Between 3–7pm: text all daytime hospitalists asking for: number of patients seen, number of discharges, anticipated discharges next day.
+- PM and HS hospitalists receive daily reminder email from Ericka to enter numbers.
+- On-call hospitalist enters total starting patient number into Teams Excel by 8am daily.
+
+AMION:
+- Website where you find which hospitalists are on for the day and where the call schedule is found.`;
+
+const qaMsgs = [];
+let qaBusy = false;
+
+async function qaSend() {
+  if (qaBusy) return;
+  const inp = document.getElementById('qa-input');
+  const txt = inp.value.trim(); if (!txt) return;
+  inp.value = '';
+  addMsg('qa-msgs','user',txt,null);
+  qaBusy = true; showTyping('qa-msgs','qa-ty');
+  if (API_KEY) {
+    try {
+      qaMsgs.push({role:'user',content:txt});
+      const rep = await callAPI(OPS_SYSTEM, qaMsgs);
+      qaMsgs.push({role:'assistant',content:rep});
+      removeTyping('qa-ty'); addMsg('qa-msgs','ai',rep,'📋 Based on your operations documents');
+      qaBusy = false; return;
+    } catch(e) { console.warn('API error, using built-in:', e.message); }
+  }
+  removeTyping('qa-ty');
+  addMsg('qa-msgs','ai', opsEngine(txt), '📋 From your operations documents');
+  qaBusy = false;
+}
+function qaAsk(q) { show('qa'); document.getElementById('qa-input').value=q; qaSend(); }
+
+function opsEngine(q) {
+  const t = q.toLowerCase();
+  const has = (...terms) => terms.some(w => t.includes(w));
+
+  if (has('shift hour','what time','when start','when does my shift','shift start','shift end') && !has('extension','pay','surge'))
+    return "📋 Shift hours:\n\n🌅 Day shift: 7am–5pm. Stay until at least 3pm. Take secure chats until 9pm.\n\n🌞 PM1 / Swing 1 (Non-teach): 12pm–8pm. Pager call 12–5pm. Last admit 6:30pm.\n\n🌆 PM2 / Swing 2 (Non-teach): 4pm–midnight. Pager call 5–10pm. Last admit 10pm.\n\n🌙 Teach PM: 3pm–11pm. Calls 3–9pm. Cross covers own patients until 11pm.\n\n🌃 Night shift (HS): 9pm–7am. Last admit 6:30am. Pager call: 9pm–7am (teach) / 10pm–7am (non-teach).\n\n⚡ Surge PM: 5–10pm Mon–Fri only.";
+
+  if ((has('how many patient','max patient','patient cap','maximum','expected to see','expected to admit') || (has('how many') && has('patient','admit'))) && !has('surge'))
+    return "📋 Maximum patients per shift:\n\n🌅 Day: Non-teach 12–14 · Resident-only team 13–15 · Full teach team 14–18\n🌞 PM1 / Swing 1: Max 8 admits\n🌆 PM2 / Swing 2: Max 8 admits\n🌙 Teach PM: Max 8 patients\n🌃 Night HS: Max 8 (teach) / 7 (non-teach)\n⚡ Surge day: 10 expected, up to 13 voluntary ($200/pt for 11–13)\n⚡ Surge PM: Min 3, expected 4, max 5";
+
+  if (has('shift extension','extra pay','exceed','over my cap','past my max','more than 8','more than 7') || (has('extension') && has('pay','qualify','how')))
+    return "📋 Shift extension — $200 per admit after your cap:\n\n🌞 PM shift (both sites): After 8 patients\n🌙 HS night teach: After 8 patients\n🌙 HS night non-teach: After 7 patients\n🌅 Day non-teach: After 2pm if you have already seen 13+ patients\n⚡ Surge: After 10 → $200 per patient for 11, 12, 13 (voluntary, Ericka asks)\n\n📞 Contact Ericka Martin to arrange shift extension.";
+
+  if (has('surge pay','standby','how much does surge','surge compensation','surge fee') || (has('$') && has('surge')))
+    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge:\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Mon–Fri 5–10pm only\n\n📞 Sign up via Ericka Martin.";
+
+  if (has('jeopardy'))
+    return "📋 Jeopardy:\n\nAssigned approximately once a month. You must be available to cover day, evening, or night shifts if someone calls in sick.\n\n• You will only be called for ONE shift per day — not two shifts in the same day.\n• Check AMION for the jeopardy schedule.\n• Contact Liesbet Joris Quinton (LJQ) if you cannot work a scheduled day.";
+
+  if (has('am distribution','morning distribution','distribute patient','7am','7:00') && has('distribut','assign'))
+    return "📋 AM patient distribution:\n\n• On-call hospitalist distributes all PM/HS patients to day hospitalists by 7:00 AM.\n• Update attending on each patient's list and add to treatment team.\n• Update Teams daily numbers with total census by 8am.\n• NOT expected to notify others about teaching service admissions.\n\n🦴 Ortho (Green): Karen Yegella distributes Mon–Fri. Each daytime team sees 1 new ortho patient. PM1/PM2 split remainder (max 3 each). Overflow → HS nocturnist.";
+
+  if (has('cross cover','crosscover')) {
+    if (has('pm','swing','evening'))
+      return "📋 PM shift cross cover:\n\n• Handle issues on your admitted patients until 11pm.\n• After 11pm → nocturnist takes over.\n• Log into Haiku/Secure chat and set availability until 11pm.\n• Nocturnist adds PM hospitalist to secure chats received between 9–11pm.\n• Resident-admitted patients → nocturnist adds night float, not PM hospitalist.";
+    if (has('night','hs','nocturnist'))
+      return "📋 Night shift cross cover:\n\nRecord all events in To Do column in Epic. Title 'XC'. Place above patient sign out. List chronologically.\n\n✅ Record: afib meds, fluid boluses, hyponatremia management, escalating pain meds, new/changed abx, new imaging.\n❌ Skip: one-time nausea/sleep aid/antipyretics, restraints, hypertension meds, insulin.\n\nMajor events (death, code, STEMI, stroke/seizure): call day hospitalist at 7am AND write Significant Event Note in Epic.";
+    return "📋 Cross cover summary:\n\n🌅 Day: Cover own patients until 9pm. Sign out to nocturnist at 9pm.\n🌙 PM shift: Cover own admits until 11pm. Nocturnist after 11pm.\n🌃 Night: Record all events in Epic To Do as 'XC'. Major events → call day team at 7am.\n\nTeach site: resident patients covered by night float, not nocturnist.";
+  }
+
+  if (has('direct admission','direct admit'))
+    return "📋 Direct admission criteria:\n\n✅ Eligible:\n• Seen in clinic or outpatient that same day\n• Stable vitals: HR 50–120, BP >100, RR 10–26, O2 >90% on ≤2L\n• Stable labs/imaging not needing triage\n\n❌ Not eligible:\n• Patient at home or not seen that day\n• Abnormal labs (leukocytosis, elevated K+, elevated troponin)\n• Complicated diverticulitis / surgical abdomen\n• Unstable vitals or urgent imaging/labs needed\n• Another service should be primary (BMT, Onc, Hepatology, Surgery)\n\n📞 Workflow: Outpatient MD calls inpatient logistics for bed, then calls hospitalist to discuss unit.";
+
+  if (has('icu hold','icu list','icu transfer'))
+    return "📋 ICU hold list:\n\n• When patient goes to ICU: remove from your list → place on Green or Memorial ICU Hold List. Note team and house staff involvement in To Do.\n• Do NOT distribute ICU hold patients during overnight distribution.\n\nWhen ICU calls patient out:\n• Remove from hold list. ICU responsible for care until patient physically leaves.\n• Day (7am–4pm): assign to daytime team, write ICU accept note, bill level 1 — even if still in ICU.\n• PM/Night (4pm–7am): same, unless PM/HS has >7 patients.\n\n📝 Note to include until patient leaves ICU: 'Please contact ICU team for orders or questions about patient care until they have left the ICU.'";
+
+  if (has('jade'))
+    return "📋 JADE team (Scripps Memorial):\n\n• Dedicated to trauma/ACS patients at Memorial.\n• Trauma rounds: 8am daily, 5th floor Browning, room code 2046.\n• Takes trauma admits/consults until 3pm, 7 days/week.\n• Max 12 patients after AM distribution.\n• HM consults 7am–3pm → JADE (up to 15 max). Overflow → PM hospitalist.\n• End of week: offload non-trauma patients; consolidate all trauma onto JADE.";
+
+  if (has('red team'))
+    return "📋 Red Team (Scripps Green):\n\nDedicated to Bone Marrow Transplant (BMT) patients at Scripps Green. Red Team patients are excluded from the general census count for surge activation purposes.";
+
+  if (has('contact','karen','ericka','shadan','liesbet','ljq') || (has('who') && has('call','email','reach','contact')))
+    return "📋 Key contacts:\n\n👩‍💼 Karen Yegella — Admin at Green. Ortho distribution, MDH invites.\n👩‍💼 Ericka Martin — Green and Memorial. Surge sign-ups, shift extension, Epic inbox coverage.\n🏥 Liesbet Joris Quinton (LJQ) — Division head, both sites. Contact if you can't work a scheduled day. Repatriation issues.\n🏥 Farhad Shadan — Division head, Memorial. Repatriation issues at Memorial.";
+
+  if (has('repatriation','ctc','transfer center','cannot refuse','capacity') && has('pm','hs','night','evening','shift'))
+    return "📋 Repatriation / CTC capacity (PM/HS shift):\n\n• Cannot refuse admits from TPUC or LJED for capacity — but CAN ask to hold in ED/UCC until caught up.\n\nCTC capacity limits:\n• 6 patients if no/minimal house-staff\n• 7 patients if house-staff in-house\n• 4+ on site with ≤2 on the way (ETA ≤30 min)\n\n📧 Email with time of request + patient list screenshot:\n• Green → LJQ and Dan Dworsky\n• Memorial → Farhad Shadan and LJQ";
+
+  if (has('resident','which site','when are resident','night float','teach site') && has('when','which','where'))
+    return "📋 Resident schedule:\n\n• June 16 – Dec 16: Residents at Scripps Memorial (teach site)\n• Dec 17 – June 15: Residents at Scripps Green (teach site)\n• Night float always at same site as day residents.\n• Teaching teams: 3 teams (1 resident + 2 interns, cap 18) + 1 resident-only team (cap 14).\n• Night float starts at 6pm, cap of 7 total patients.";
+
+  if (has('mdh','multidisciplinary','huddle'))
+    return "📋 MDH / Rounds:\n\n🏥 Green MDH: 10:30–11:30am on Microsoft Teams. Contact Karen Yegella for your time slot. 3W/3N goes first, then 4N/4W. Discuss EDD and patient needs.\n\n🏨 Memorial MDH: No longer held. Update EDD in Epic on all patients by 1pm.\n\n🌅 Teaching team rounds: 9:30am (unless different arrangement with your resident).";
+
+  if (has('epic inbox','inbox','unable to check'))
+    return "📋 Epic inbox coverage:\n\n• Pink Team hospitalist manages inboxes of absent providers.\n\nIf you'll be away:\n1. Email Pink Team hospitalists + Ericka with request and dates\n2. Grant them Epic inbox access\n3. Remove access when you return\n\n• Covering hospitalist: views results inbox ONCE daily for critical issues only. Orders, CDI, notes → not their responsibility.\n• Ericka notifies Health Information so you won't be penalized for late charts.";
+
+  if (has('email','text') && has('patient','discharged','post discharge','after discharge'))
+    return "📋 Patient emails/texts after discharge:\n\n• All must be addressed — patients may not have timely follow-up.\n• Do NOT respond via email or text — must be documented in medical record.\n• Call patient by phone.\n• Create Telephone Encounter in Epic to document.\n• Close and route to PCP and relevant outpatient physicians.";
+
+  if (has('consult') && has('pm','hs','night','evening'))
+    return "📋 PM/HS consult guidelines:\n\n• Call ALL necessary consults during your shift — do not defer to daytime.\n• Place consult ORDER in Epic AND call directly. Order alone is not sufficient.\n• Document in To Do column: who you consulted and name of person contacted.\n• OK to wait until 6am for non-urgent consults to avoid waking people overnight.\n\nExceptions (can defer to morning): Pulmonary on weekdays at Green and Memorial.";
+
+  if (has('amion'))
+    return "📋 AMION:\n\nAMION is the scheduling website where you find which hospitalists are on for the day and where the call schedule is posted. Use it when you arrive for your shift to identify the on-call hospitalist.";
+
+  if (has('daily number','tracking','spreadsheet','census number','teams excel'))
+    return "📋 Daily number tracking:\n\n• On-call/triage hospitalist at each site collects numbers from all daytime hospitalists and enters into Microsoft Teams Excel sheet.\n• Text daytime hospitalists between 3–7pm asking for: # seen, # discharged, # anticipated discharges next day.\n• PM/HS hospitalists get daily reminder email from Ericka.\n• On-call hospitalist enters total starting census into Teams Excel by 8am daily.";
+
+  return "I didn't find a specific match in your operations documents. Try asking about:\n\n• Shift hours or patient caps\n• Shift extension pay\n• AM patient distribution\n• Cross cover (PM / night)\n• Direct admission criteria\n• ICU hold list\n• Surge pay / standby fees\n• Jeopardy\n• Key contacts (Karen, Ericka, LJQ, Shadan)\n• JADE or Red Team\n• Epic inbox coverage\n• Repatriation / CTC rules\n• Resident schedule\n• MDH / rounds\n\nOr rephrase with more specific terms.";
+}
+
+// ── FREE TEXT ROUTING ──
+const ROUTE_SYSTEM = `You are a patient routing assistant for a Scripps hospitalist group. Your job is to determine:
+1. Whether a patient should go to Scripps Green or Scripps Memorial / La Jolla
+2. Whether the hospitalist should be PRIMARY service, a CONSULTING service, or not involved
+
+CRITICAL RULE — SITE FIRST: Always determine the correct site before service attribution. For general surgery cases (appendicitis, cholecystitis, diverticulitis, SBO) — most should go to Memorial unless the patient has established care with a Green surgeon or Memorial is at capacity.
+
+SITE SELECTION:
+- Most general surgery → Memorial (unless established Green surgeon or Memorial at capacity)
+- Most cardiology → Memorial. New-onset heart failure → always Memorial. Mild stable established CHF only → may consider Green
+- Most hepatology/GI → Green
+- All BMT patients → Green. Most oncology → Green (unless established with non-Green oncologist)
+- OB/GYN → Memorial (≤20 weeks, non-pregnancy issue may stay Green)
+- Urology established Green patients → Green when possible
+- Trauma/ACS → Memorial
+- Stress tests very challenging at Green; MRI with pacer or needing anesthesia easier at Memorial
+
+SERVICE ATTRIBUTION:
+ORTHOPEDICS Green: Acute/fragility fractures → Hospitalist PRIMARY (ortho consult). Elective surgery → Ortho PRIMARY. Within 90 days post-op surgical complication (wound infection, abscess, needs OR) → Ortho PRIMARY. Post-op non-surgical issue (PE, pneumonia, AKI, stroke, cellulitis, UTI) → Hospitalist PRIMARY. POD 30-60 joint infection → grey area, discuss with on-call orthopedist.
+ORTHOPEDICS Memorial: Elective with Dr. Jeffrey Smith → Ortho PRIMARY. All others including fractures, joint infections, post-op complications → Hospitalist PRIMARY. No formal co-management agreement with other Memorial ortho groups.
+BMT/ONCO (Green): BMT PRIMARY: leukemia/lymphoma/myeloma treatment, within 3 months of stem cell transplant, CAR-T within 8 weeks, recently d/c from BMT with complex/progressive disease. Hospitalist PRIMARY: neutropenic fever, non-hematologic issues, scheduled chemo (hospitalist attending of record once H/O signs order set), transplant >3 months with non-hematologic issue.
+CARDIOLOGY (Memorial): Cardiology PRIMARY: STEMI (Code STEMI), NSTEMI (not type 2)/unstable angina with EKG changes, LVAD, unstable arrhythmia/ICD activation, complications of recent cardiac procedures, hemodynamically unstable. Hospitalist PRIMARY: stable CHF, stable AF with RVR, post-TAVR non-cardiac issue.
+VASCULAR (Green): Vascular PRIMARY: acute limb ischemia, <30 days post-op complications. Hospitalist PRIMARY: chronic PAD/rest pain, >30 days post-op non-surgical complication, dialysis complications.
+GENERAL SURGERY Green: Uncomplicated appendicitis (medically simple) → GSURG PRIMARY. Straightforward cholecystitis 6am-9pm → GSURG PRIMARY; 9pm-6am → Hospitalist PRIMARY (transfer to GSURG morning). Complex biliary/SBO/diverticulitis → Hospitalist PRIMARY (GSURG consult only if attending deems necessary). Post-op medical complication → Hospitalist PRIMARY. Post-op surgical complication → GSURG PRIMARY.
+GENERAL SURGERY Memorial: Hospitalist PRIMARY for appendicitis, cholecystitis, diverticulitis, SBO (surgical groups don't maintain admitting service).
+OB/GYN (Memorial): ≤20 weeks, non-pregnancy issue → Hospitalist PRIMARY. >20 weeks or pregnancy issue → OB PRIMARY.
+UROLOGY (Green): Kidney stone → Hospitalist PRIMARY. Post-op complication → Urology PRIMARY.
+HEPATOLOGY (Green): Most → Hospitalist PRIMARY. IBD exacerbation, GI procedure complication → GI PRIMARY. Within 1 month liver transplant → Surgical transplant PRIMARY.
+TRAUMA (Memorial): Acute trauma → Trauma PRIMARY. Minor trauma/prolonged stay → case by case.
+ICU: Closed at both sites. Hospitalists do not manage ICU-level patients. Exception: Green overflow patients at med/surg level only.
+
+Respond in this exact format:
+🏥 SITE: [Scripps Green / Scripps Memorial / Depends — explain]
+👨‍⚕️ SERVICE: [Hospitalist PRIMARY / Specialty PRIMARY — name specialty / Hospitalist CONSULT]
+📋 REASON: [2-3 sentences from the co-management agreements]
+⚠️ NUANCE: [any grey areas, timing rules, or important caveats — omit this line if straightforward]`;
+
+const rMsgs = [];
+let rBusy = false;
+
+async function callRouteAPI(text) {
+  rMsgs.push({role:'user',content:text});
+  const rep = await callAPI(ROUTE_SYSTEM, rMsgs);
+  rMsgs.push({role:'assistant',content:rep});
+  return rep;
+}
+
+function renderAIResult(text) {
+  const out = document.getElementById('ft-result');
+  const siteM = text.match(/🏥 SITE:\s*(.+)/);
+  const serviceM = text.match(/👨‍⚕️ SERVICE:\s*(.+)/);
+  const reasonM = text.match(/📋 REASON:\s*([\s\S]+?)(?=⚠️|$)/);
+  const nuanceM = text.match(/⚠️ NUANCE:\s*([\s\S]+?)$/);
+  const site = siteM ? siteM[1].trim() : '';
+  const service = serviceM ? serviceM[1].trim() : '';
+  const reason = reasonM ? reasonM[1].trim() : text;
+  const nuance = nuanceM ? nuanceM[1].trim() : '';
+  const isH = service.toLowerCase().includes('hospitalist primary');
+  const hdrClass = isH ? 'primary' : service.toLowerCase().includes('primary') ? 'specialty' : 'warn';
+  const icon = isH ? '✓' : '→';
+  out.innerHTML = `<div class="ft-verdict">
+    <div class="ft-verdict-header ${hdrClass}">${icon} ${service} <span class="ft-confidence high">AI answer</span></div>
+    <div class="ft-verdict-body">
+      ${site ? `<div class="ft-verdict-row"><span class="lbl">🏥 Site</span><span class="val">${site}</span></div>` : ''}
+      <div class="ft-verdict-row"><span class="lbl">📋 Reason</span><span class="val">${reason}</span></div>
+    </div>
+    ${nuance ? `<div class="ft-nuance">⚠️ ${nuance}</div>` : ''}
+  </div>`;
+}
+
+async function analyzeText() {
+  const raw = document.getElementById('ft-input').value.trim();
+  const out = document.getElementById('ft-result');
+  if (!raw) { out.innerHTML=''; return; }
+  out.innerHTML='<div class="ft-no-match" style="color:#1a56db">Analyzing…</div>';
+  try { const rep = await callRouteAPI(raw); renderAIResult(rep); return; }
+  catch(e) { console.warn('API error, falling back to keyword engine:', e.message); }
+  const result = routingEngine(raw.toLowerCase());
+  if (!result) {
+    out.innerHTML='<div class="ft-no-match">Unable to match this scenario. Try the Guided flow tab, or add more detail (site, post-op day, diagnosis).</div>';
+    return;
+  }
+  const hdr = result.type==='primary'?'primary':result.type==='specialty'?'specialty':'warn';
+  const conf = result.confidence==='high'?'<span class="ft-confidence high">High confidence</span>':'<span class="ft-confidence medium">Review recommended</span>';
+  out.innerHTML = `<div class="ft-verdict">
+    <div class="ft-verdict-header ${hdr}">${result.title}${conf}</div>
+    <div class="ft-verdict-body">
+      <div class="ft-verdict-row"><span class="lbl">🏥 Site</span><span class="val">${result.site}</span></div>
+      <div class="ft-verdict-row"><span class="lbl">👨‍⚕️ Service</span><span class="val">${result.service}</span></div>
+      <div class="ft-verdict-row"><span class="lbl">📋 Reason</span><span class="val">${result.reason}</span></div>
+    </div>
+    ${result.nuance ? `<div class="ft-nuance">⚠️ ${result.nuance}</div>` : ''}
+  </div>`;
+}
+
+function ftFill(text) { document.getElementById('ft-input').value=text; document.getElementById('ft-result').innerHTML=''; analyzeText(); }
+
+// ── ROUTING ENGINE ──
+function routingEngine(t) {
+  // helpers
+  const has = (...terms) => terms.some(w => t.includes(w));
+  const hasAll = (...terms) => terms.every(w => t.includes(w));
+  const atGreen = has('green');
+  const atMemorial = has('memorial','la jolla','lj');
+  const site = atGreen ? 'Scripps Green' : atMemorial ? 'Scripps Memorial / La Jolla' : null;
+
+  // POD detection
+  const podMatch = t.match(/pod[#\s]*(\d+)|post.?op\s*day\s*(\d+)|(\d+)\s*days?\s*post/);
+  const pod = podMatch ? parseInt(podMatch[1]||podMatch[2]||podMatch[3]) : null;
+
+  // ── ORTHOPEDICS ──
+  const isFracture = has('fracture','hip fracture','femur fracture','pelvic fracture','vertebral','compression fracture','orif','kyphoplasty');
+  const isElectiveOrtho = has('elective','total knee','total hip','tkr','thr','tka','tha','knee replacement','hip replacement','shoulder replacement','lumbar fusion','spinal fusion','spine surgery') && !isFracture;
+  const isOrthoWound = has('wound infection','wound drainage','abscess','hardware infection','prosthetic joint infection','pji','periprosthetic','septic joint') && (has('ortho','joint','hip','knee','shoulder','ankle','spine') || pod !== null);
+  const isOrthoPostopNonSurgical = (has('pneumonia','pe','pulmonary embolism','dvt','aki','acute kidney','stroke','cva','cellulitis','uti','urinary tract','hyponatremia','afib','atrial fib','dehydration')) && (pod !== null || has('post op','post-op','postop','replacement','orif','fusion'));
+
+  if (isElectiveOrtho) {
+    if (atMemorial && has('jeffrey smith','dr smith','dr. smith')) return {type:'specialty',title:'→ Orthopedics PRIMARY',site:'Scripps Memorial',service:'Orthopedics PRIMARY · Hospitalist consult if requested',reason:'Elective orthopedic surgery with Dr. Jeffrey Smith → Ortho primary at Memorial.',nuance:'No formal co-management agreement with other Memorial ortho groups.',confidence:'high'};
+    if (atMemorial) return {type:'specialty',title:'→ Orthopedics PRIMARY',site:'Scripps Memorial',service:'Orthopedics PRIMARY · Hospitalist consult if requested',reason:'Elective orthopedic surgery → Ortho primary.',nuance:'At Memorial, no formal co-management agreement with most ortho groups (independent private practices). Contact Dr. Shadan if not getting adequate support.',confidence:'high'};
+    return {type:'specialty',title:'→ Orthopedics PRIMARY',site:site||'Scripps Green',service:'Orthopedics PRIMARY · Hospitalist consult if requested',reason:'Elective orthopedic surgery (knee/hip/spine replacement) → Ortho is the admitting and primary service.',nuance:'',confidence:'high'};
+  }
+  if (isFracture) {
+    const s = site || 'Scripps Green';
+    return {type:'primary',title:'✓ Hospitalist PRIMARY',site:s,service:'Hospitalist PRIMARY · Orthopedics consult',reason:'Acute and fragility fractures are admitted to the hospitalist service with orthopedics as consultant.',nuance:s==='Scripps Green'?'For outside hospital transfers, confirm ortho has agreed to consult before accepting.':'No formal co-management agreement with Memorial ortho groups. Contact Dr. Shadan if not getting adequate support.',confidence:'high'};
+  }
+  if (isOrthoPostopNonSurgical) {
+    return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Green',service:'Hospitalist PRIMARY · Orthopedics consult as needed',reason:'Post-operative non-surgical complication (pneumonia, PE, AKI, stroke, cellulitis, UTI, etc.) → Hospitalist primary, ortho consulting as needed.',nuance:'',confidence:'high'};
+  }
+  if (isOrthoWound && pod !== null) {
+    if (pod <= 29) return {type:'specialty',title:'→ Orthopedics PRIMARY',site:site||'Scripps Green',service:'Orthopedics PRIMARY · Hospitalist consult',reason:`POD ${pod} wound infection/abscess within 30 days → Ortho primary. Hospitalist consults for medical co-management.`,nuance:'Exception: late night admission with stable vitals and no emergent OR needed — hospitalist may admit as courtesy if comfortable, after direct discussion with on-call orthopedist.',confidence:'high'};
+    if (pod >= 30 && pod <= 89) return {type:'warn',title:'⚠ Grey area — discuss with on-call orthopedist',site:site||'Scripps Green',service:'Discuss with on-call orthopedist',reason:`POD ${pod} joint/wound infection. Within 90 days post-op surgical complications are typically ortho primary, but POD 30–60 prosthetic infections are a grey zone.`,nuance:'It is acceptable for the hospitalist to take primary if the orthopedist requests it. Call the on-call orthopedist to discuss.',confidence:'medium'};
+    return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Green',service:'Hospitalist PRIMARY · Orthopedics consult',reason:`POD ${pod} — beyond 90 days post-op. Non-surgical or late post-op complications generally fall to hospitalist primary.`,nuance:'Confirm with orthopedics.',confidence:'medium'};
+  }
+
+  // ── GENERAL SURGERY ──
+  const isAppendix = has('appendicitis','appendectomy');
+  const isChole = has('cholecystitis','cholecystectomy','gallbladder');
+  const isDiverti = has('diverticulitis','diverticular');
+  const isSBO = has('sbo','small bowel obstruction','bowel obstruction');
+  const isComplexBiliary = has('cholangitis','choledocholithiasis','gallstone pancreatitis','biliary pancreatitis');
+  const isGeneralSurg = isAppendix || isChole || isDiverti || isSBO || isComplexBiliary;
+
+  if (isGeneralSurg) {
+    // Site check — most should go to Memorial
+    const effectiveSite = atGreen ? 'Scripps Green' : 'Scripps Memorial / La Jolla';
+    const goesToMemorial = !atGreen;
+
+    if (isComplexBiliary) {
+      return {type:'primary',title:'✓ Hospitalist PRIMARY',site:effectiveSite,service:'Hospitalist PRIMARY (or GI) · GSURG consult only if attending deems necessary',reason:'Complex biliary issues (cholangitis, choledocholithiasis, gallstone pancreatitis) → Hospitalist or GI primary. GSURG is NOT reflexively consulted.',nuance:'',confidence:'high'};
+    }
+    if (isSBO || isDiverti) {
+      if (goesToMemorial) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · General Surgery consult',reason:'At Memorial, hospitalist is primary for SBO and diverticulitis with general surgery consulting (independent surgical groups do not maintain their own admitting service).',nuance:'Exception: immediate operative intervention planned or direct transfer accepted by surgeon for urgent surgery → Surgery primary.',confidence:'high'};
+      return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Green',service:'Hospitalist PRIMARY · GSURG consult only if attending deems necessary',reason:'SBO and diverticulitis at Green → Hospitalist primary. GSURG consulted only if the attending deems it necessary — not reflexively.',nuance:'Note: most general surgery patients should go to Memorial unless the patient has an established Green surgeon or Memorial is at capacity.',confidence:'high'};
+    }
+    if (isAppendix) {
+      if (goesToMemorial) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · General Surgery consult',reason:'At Memorial, hospitalist is primary for appendicitis with general surgery consulting.',nuance:'',confidence:'high'};
+      // Green - medically simple uncomplicated
+      return {type:'specialty',title:'→ General Surgery PRIMARY',site:'Scripps Green',service:'General Surgery PRIMARY · Hospitalist consult post-op if needed',reason:'Uncomplicated appendicitis in a medically simple patient at Green → Admit to GSURG.',nuance:'Note: most general surgery should go to Memorial unless established Green surgeon or Memorial at capacity. If medically complex, hospitalist may need to admit for pre-op optimization first.',confidence:'medium'};
+    }
+    if (isChole) {
+      if (goesToMemorial) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · General Surgery consult',reason:'At Memorial, hospitalist is primary for cholecystitis with general surgery consulting.',nuance:'',confidence:'high'};
+      // Green + time
+      const isNight = has('night','pm','evening','overnight','9pm','10pm','11pm','midnight','2am','3am','4am','5am');
+      const isDay = has('morning','day','6am','7am','8am','9am','10am','11am','noon','afternoon','1pm','2pm','3pm','4pm','5pm','6pm','7pm','8pm');
+      if (isNight) return {type:'primary',title:'✓ Hospitalist PRIMARY (overnight) → Transfer to GSURG morning',site:'Scripps Green',service:'Hospitalist PRIMARY overnight · Transfer to GSURG after 6am',reason:'Straightforward acute cholecystitis overnight (9pm–6am) at Green → Hospitalist admits. Consult GSURG after 6am. Once GSURG sees patient and surgery is planned, patient transfers to GSURG.',nuance:'Note: most general surgery should go to Memorial unless established Green surgeon or Memorial at capacity.',confidence:'high'};
+      if (isDay) return {type:'specialty',title:'→ General Surgery PRIMARY (6am–9pm)',site:'Scripps Green',service:'General Surgery PRIMARY · Hospitalist consult if medical issues arise',reason:'Straightforward acute cholecystitis daytime (6am–9pm) at Green → Admit to GSURG.',nuance:'Note: most general surgery should go to Memorial unless established Green surgeon or Memorial at capacity. If septic or medically complex → Hospitalist primary.',confidence:'high'};
+      return {type:'warn',title:'⚠ Cholecystitis at Green — check time',site:'Scripps Green',service:'Depends on time of day',reason:'Straightforward acute cholecystitis: 6am–9pm → GSURG primary. 9pm–6am → Hospitalist primary, transfer to GSURG in the morning.',nuance:'Note: most general surgery should go to Memorial unless established Green surgeon or Memorial at capacity.',confidence:'medium'};
+    }
+  }
+
+  // ── CARDIOLOGY ──
+  const isSTEMI = has('stemi','stemi equivalent','st elevation','code stemi');
+  const isNSTEMI = has('nstemi','non-stemi','rising troponin','unstable angina') && !isSTEMI;
+  const isLVAD = has('lvad');
+  const isICD = has('icd fired','icd activation','device activation','icd shock');
+  const isCardiacProcComp = has('tavr complication','pacemaker complication','ep ablation complication','device complication');
+  const isUnstableArrhythmia = has('unstable arrhythmia','vt ','vfib','v-fib','v-tach') && !has('stable');
+  const isCHF = has('chf','heart failure','hf ','pulmonary edema','volume overload') && !has('new onset','new-onset','newly diagnosed','first time','de novo');
+  const isNewCHF = has('new onset','new-onset','newly diagnosed','first time','de novo') && has('chf','heart failure','hf');
+  const isAFib = has('afib','af ','atrial fib','atrial flutter','rvr') && !has('unstable');
+
+  if (isSTEMI) return {type:'specialty',title:'→ Cardiology PRIMARY — Code STEMI',site:'Scripps Memorial / La Jolla',service:'Cardiology PRIMARY · Activate Code STEMI',reason:'STEMI or STEMI equivalent → activate Code STEMI. Cardiology is primary.',nuance:'',confidence:'high'};
+  if (isNSTEMI) return {type:'specialty',title:'→ Cardiology PRIMARY',site:'Scripps Memorial / La Jolla',service:'Cardiology PRIMARY',reason:'NSTEMI (not type 2) with rising troponins, or unstable angina with EKG changes → Cardiology fellow on-call accepts the admission.',nuance:'',confidence:'high'};
+  if (isLVAD) return {type:'specialty',title:'→ Cardiology PRIMARY',site:'Scripps Memorial / La Jolla',service:'Cardiology PRIMARY',reason:'LVAD patients → Cardiology primary.',nuance:'',confidence:'high'};
+  if (isICD) return {type:'specialty',title:'→ Cardiology PRIMARY',site:'Scripps Memorial / La Jolla',service:'Cardiology PRIMARY',reason:'ICD activation/firing → Cardiology primary.',nuance:'',confidence:'high'};
+  if (isUnstableArrhythmia) return {type:'specialty',title:'→ Cardiology PRIMARY',site:'Scripps Memorial / La Jolla',service:'Cardiology PRIMARY',reason:'Unstable arrhythmia → Cardiology primary.',nuance:'',confidence:'high'};
+  if (isNewCHF) return {type:'warn',title:'⚠ New onset heart failure → Memorial',site:'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · Cardiology consult',reason:'New-onset heart failure must always be admitted at Memorial, not Green.',nuance: atGreen?'This patient is presenting to Green but should be transferred to Memorial.':'',confidence:'high'};
+  if (isCHF) {
+    if (atGreen) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Green',service:'Hospitalist PRIMARY · Cardiology consult if needed',reason:'Mild stable established CHF exacerbation may be considered for Green. Hospitalist primary.',nuance:'New-onset heart failure must go to Memorial. Only mild, established CHF exacerbations may stay at Green.',confidence:'medium'};
+    return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · Cardiology consult if needed',reason:'CHF exacerbation → Hospitalist primary, cardiology consult if needed.',nuance:'',confidence:'high'};
+  }
+  if (isAFib) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · Cardiology consult if needed',reason:'Hemodynamically stable AF with RVR → Hospitalist primary. Cardiology available for consult.',nuance:'',confidence:'high'};
+
+  // ── BMT / ONCOLOGY ──
+  const isBMTPrimary = has('aml','leukemia','lymphoma','myeloma','multiple myeloma','car-t','cart','stem cell transplant','sct','bmt','bone marrow transplant','relapse','induction chemo','induction chemotherapy') && !has('5 months','6 months','7 months','8 months','9 months','10 months','11 months','12 months');
+  const isWithin3Mo = has('1 month','2 month','3 month','4 week','5 week','6 week','7 week','8 week','9 week','10 week','11 week','12 week') && has('transplant','sct','bmt');
+  const isBMTNonHeme = has('neutropenic fever','neutropenic','non-hematologic') || (has('pneumonia','bowel obstruction','afib','atrial fib','uti','cellulitis') && has('cancer','oncology','lymphoma','myeloma','leukemia','malignancy','chemo'));
+  const isScheduledChemo = has('scheduled chemo','scheduled chemotherapy','bispecific','admitted for chemo','chemo admission');
+
+  if (isBMTNonHeme && !isBMTPrimary) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Green',service:'Hospitalist PRIMARY · BMT / H-O consult',reason:'Non-hematologic issues and neutropenic fever in oncology/BMT patients → Hospitalist primary. BMT/H-O provides timely consultation.',nuance:'Use BMT order set. Hospitalists manage non-oncologic issues; oncology manages treatment.',confidence:'high'};
+  if (isScheduledChemo) return {type:'primary',title:'✓ Hospitalist PRIMARY (attending of record)',site:'Scripps Green',service:'Hospitalist PRIMARY · H/O manages all treatment orders',reason:'Scheduled chemotherapy or bispecific therapy: hospitalist is attending of record once H/O fellow completes and signs the order set.',nuance:'H/O manages all treatment orders. Hospitalist manages non-oncologic issues and completes discharge summary.',confidence:'high'};
+  if (isBMTPrimary || isWithin3Mo) return {type:'specialty',title:'→ BMT PRIMARY',site:'Scripps Green',service:'BMT PRIMARY · Hospitalist consult',reason:'Hematologic/oncologic active issue, leukemia/lymphoma/myeloma treatment, within 3 months of stem cell transplant, or CAR-T within 8 weeks → BMT is the service of record.',nuance:'',confidence:'high'};
+
+  // ── VASCULAR ──
+  const isAcuteLimb = has('acute limb ischemia','limb ischemia','acute ischemia') && !has('chronic');
+  const isVascularPostop = has('vascular') && pod !== null && pod <= 30;
+  const isChronicPAD = has('chronic pad','rest pain','gangrene','chronic limb') && !isAcuteLimb;
+  const isDialysis = has('dialysis','fistula','avf','avg','esrd','missed dialysis');
+
+  if (isAcuteLimb) return {type:'specialty',title:'→ Vascular Surgery PRIMARY',site:site||'Scripps Green',service:'Vascular Surgery PRIMARY · Hospitalist consult',reason:'Acute limb ischemia → Vascular Surgery primary.',nuance:'',confidence:'high'};
+  if (isVascularPostop) return {type:'specialty',title:'→ Vascular Surgery PRIMARY',site:site||'Scripps Green',service:'Vascular Surgery PRIMARY · Hospitalist consult',reason:`POD ${pod} vascular post-op complication within 30 days → Vascular Surgery primary.`,nuance:'',confidence:'high'};
+  if (isChronicPAD) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Green',service:'Hospitalist PRIMARY · Vascular Surgery consult',reason:'Chronic PAD, rest pain, or gangrene without acute emergency → Hospitalist primary, vascular surgery as consultant.',nuance:'',confidence:'high'};
+  if (isDialysis) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Green',service:'Hospitalist PRIMARY',reason:'Dialysis-related complications, missed dialysis, or ESRD → Hospitalist primary.',nuance:'Exception: dialysis access complications within 30 days of creation → discuss with vascular surgery.',confidence:'high'};
+
+  // ── OB / GYN ──
+  const isPregnant = has('pregnant','pregnancy','obstetric','ob patient','ob admit','postpartum','post partum');
+  const weeksMatch = t.match(/(\d+)\s*week/);
+  const weeks = weeksMatch ? parseInt(weeksMatch[1]) : null;
+  const isPregnancyIssue = has('eclampsia','preeclampsia','preterm','placenta','rupture of membranes','rom','labor','contractions','pregnancy complication','antepartum','obstetric');
+
+  if (isPregnant || isPregnancyIssue) {
+    if (weeks !== null && weeks <= 20 && !isPregnancyIssue) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Memorial / La Jolla',service:'Hospitalist PRIMARY · OB consult',reason:`Patient is ${weeks} weeks gestation, admitted for a non-pregnancy medical issue → Hospitalist primary, OB consulting.`,nuance:'Non-SCMG patients must be assigned to the Ximed group, not SCMG hospitalists.',confidence:'high'};
+    return {type:'specialty',title:'→ OB PRIMARY',site:'Scripps Memorial / La Jolla',service:'OB PRIMARY · Hospitalist consult',reason:`${weeks!==null&&weeks>20?`Patient is ${weeks} weeks gestation`:'Patient'} admitted for a pregnancy-related issue or is >20 weeks → OB primary, hospitalist consulting.`,nuance:'Non-SCMG patients must be assigned to the Ximed group.',confidence:'high'};
+  }
+
+  // ── UROLOGY ──
+  const isKidneyStone = has('kidney stone','renal stone','ureteral stone','nephrolithiasis','urolithiasis','obstructing stone');
+  const isUroPostop = has('urology','urologic','nephrectomy','prostatectomy','cystectomy') && (pod !== null || has('post op','post-op','postop'));
+
+  if (isKidneyStone) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:site||'Scripps Green',service:'Hospitalist PRIMARY · Urology consult',reason:'Kidney stone → Hospitalist primary. Urology expected to see patient in a timely manner.',nuance:'No formal co-management agreement with urology.',confidence:'high'};
+  if (isUroPostop) return {type:'specialty',title:'→ Urology PRIMARY',site:site||'Scripps Green',service:'Urology PRIMARY · Hospitalist consult for medical co-morbidities',reason:'Post-operative urology complication → Urology primary, unless specifically discussed and agreed otherwise.',nuance:'',confidence:'high'};
+
+  // ── HEPATOLOGY / GI ──
+  const isIBD = has('crohn','ulcerative colitis','ibd','inflammatory bowel');
+  const isHepato = has('hepatology','cirrhosis','hepatitis','liver failure','ascites','variceal','varices','hepatic encephalopathy');
+  const isTransplant = has('transplant') && has('liver','hepatic');
+  const isWithin1MoTransplant = isTransplant && has('1 week','2 week','3 week','4 week','1 month','recent transplant','recently transplanted');
+
+  if (isWithin1MoTransplant) return {type:'specialty',title:'→ Surgical Transplant Team PRIMARY',site:'Scripps Green',service:'Surgical Transplant Team PRIMARY',reason:'Within 1 month of liver transplant or admission related to surgical transplant issues → Surgical transplant team primary.',nuance:'',confidence:'high'};
+  if (isIBD) return {type:'specialty',title:'→ GI PRIMARY',site:'Scripps Green',service:'GI PRIMARY · Hospitalist consult if needed',reason:'IBD exacerbation without other active medical problems → GI is the primary service.',nuance:'',confidence:'high'};
+  if (isHepato) return {type:'primary',title:'✓ Hospitalist PRIMARY',site:'Scripps Green',service:'Hospitalist PRIMARY · Hepatology / GI consult',reason:'Most GI and hepatology admissions → Hospitalist primary at Scripps Green with GI/hepatology consulting.',nuance:'',confidence:'high'};
+
+  // ── TRAUMA ──
+  const isTrauma = has('trauma','mvc','motor vehicle','fall from height','penetrating','gsw','gun shot','stab wound','traumatic brain','tbi');
+  if (isTrauma) return {type:'specialty',title:'→ Trauma PRIMARY',site:'Scripps Memorial / La Jolla',service:'Trauma PRIMARY · Hospitalist consult',reason:'Acute trauma → Trauma primary at Memorial. The JADE team works with the trauma service.',nuance:'For minor trauma, trauma may ask hospitalist to be primary. Evaluate case by case.',confidence:'high'};
+
+  // ── ICU ──
+  if (has('icu','intensive care','critical care','intubated','intubation','vent ','ventilator','pressors','vasopressors')) {
+    return {type:'warn',title:'⚠ ICU — hospitalists do not manage ICU-level patients',site:site||'Green or Memorial',service:'ICU team PRIMARY',reason:'The ICU at both sites is a closed unit. Hospitalists do not manage ICU-level patients.',nuance:'Exception: at Green, overflow patients boarded in the ICU are managed by the hospitalist at med/surg level of care only.',confidence:'high'};
+  }
+
+  return null;
+}
+
+
+
+
+
+function getSiteWarning() {
+  const site = gS.site;
+  if (site === 'green') {
+    return `<div class="site-banner green-banner">
+      <strong>🏥 Scripps Green</strong>
+      <div class="site-rules">
+        <div class="site-rule wrong">⚠️ <strong>Usually Memorial:</strong> General surgery (appendicitis, cholecystitis, diverticulitis, SBO) · New-onset heart failure · Most cardiology · OB/GYN</div>
+        <div class="site-rule ok">✓ <strong>Green is appropriate for:</strong> Orthopedics · BMT / Oncology · Hepatology / GI · Vascular surgery · Established Green urology · Mild stable CHF</div>
+        <div class="site-rule neutral">ℹ️ Stress tests are challenging at Green · MRI with pacer or needing anesthesia is easier at Memorial</div>
+      </div>
+    </div>`;
+  }
+  if (site === 'memorial') {
+    return `<div class="site-banner memorial-banner">
+      <strong>🏨 Scripps Memorial / La Jolla</strong>
+      <div class="site-rules">
+        <div class="site-rule ok">✓ <strong>Memorial is appropriate for:</strong> General surgery · Cardiology · New-onset heart failure · OB/GYN · Trauma / ACS · Most urology</div>
+        <div class="site-rule wrong">⚠️ <strong>Usually Green:</strong> BMT / Oncology · Hepatology / GI · Orthopedics (most) · Established Green patients when possible</div>
+      </div>
+    </div>`;
+  }
+  if (site === 'transfer') {
+    return `<div class="site-banner transfer-banner">
+      <strong>🚗 Outside hospital transfer</strong>
+      <div class="site-rules">
+        <div class="site-rule neutral">ℹ️ For transfers, determine the correct Scripps site before accepting. The transfer center calls orthopedics first for ortho transfers; hospitalist then discusses with outside MD and admits. For H/O patients, the H/O team verifies eligibility and coordinates with the transfer center.</div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+
+// ══ GUIDED ROUTING ══
+let gS = {step:0, specialty:null, site:null};
+function resetRoute() { gS={step:0,specialty:null,site:null}; document.getElementById('rreset').style.display='none'; renderGuided(); switchRTab('guided'); }
+
+function renderGuided() {
+  const c = document.getElementById('guided');
+  if (!c) return;
+  c.innerHTML = '';
+  const rb = document.getElementById('rreset');
+
+  if (gS.step===0) {
+    if (rb) rb.style.display='none';
+    c.innerHTML=`<p class="rq">Step 1 of 2: Where is the patient?</p>
+    <p class="rd">Site selection comes before everything else. Choose where the patient is presenting or being considered for admission.</p>
+    <button class="rbtn" onclick="gS.site='green';gS.step='0b';renderGuided()">🏥 Scripps Green</button>
+    <button class="rbtn" onclick="gS.site='memorial';gS.step='0b';renderGuided()">🏨 Scripps Memorial / La Jolla</button>
+    <button class="rbtn" onclick="gS.site='transfer';gS.step='0b';renderGuided()">🚗 Outside hospital transfer</button>`;
+    return;
+  }
+
+  if (gS.step==='0b') {
+    if (rb) rb.style.display='inline';
+    // Check if site is appropriate before proceeding
+    const siteWarning = getSiteWarning();
+    c.innerHTML=`${siteWarning}<p class="rq">Step 2 of 2: What is the patient's primary issue?</p>
+    <p class="rd">Select the specialty most relevant to this admission.</p>
+    <button class="rbtn" onclick="gPick('ortho')">🦴 Orthopedics</button>
+    <button class="rbtn" onclick="gPick('bmt')">🧬 BMT / Hematology-Oncology</button>
+    <button class="rbtn" onclick="gPick('cardio')">❤️ Cardiology</button>
+    <button class="rbtn" onclick="gPick('vascular')">🩸 Vascular surgery</button>
+    <button class="rbtn" onclick="gPick('gsurg')">🔪 General surgery</button>
+    <button class="rbtn" onclick="gPick('ob')">🤱 OB / GYN</button>
+    <button class="rbtn" onclick="gPick('urology')">💧 Urology</button>
+    <button class="rbtn" onclick="gPick('hepato')">🫀 Hepatology / GI</button>
+    <button class="rbtn" onclick="gPick('trauma')">🚑 Trauma / ACS</button>
+    <button class="rbtn" onclick="gPick('icu')">🏥 ICU / critical care</button>`;
+    return;
+  }
+  if (rb) rb.style.display='inline';
+
+  // ORTHO
+  if (gS.specialty==='ortho' && gS.step===1) {
+    // Site already known from step 0 — skip directly to step 2
+    gS.step=2; renderGuided(); return;
+  }
+  if (gS.specialty==='ortho' && gS.step===2 && gS.site==='green') {
+    c.innerHTML=`<p class="rq">What type of orthopedic admission? (Green)</p>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Acute and fragility fractures are admitted to the hospitalist service with orthopedics as consultant.','Ensure orthopedics is alerted simultaneously. For outside hospital transfers, confirm ortho has agreed to consult before accepting.')">Acute / fragility fracture</button>
+    <button class="rbtn" onclick="gV('specialty','→ Orthopedics PRIMARY','Elective surgery admissions (total knee, hip, spine) are admitted by the orthopedic team. Hospitalist consults if requested.','')">Elective surgery (knee, hip, spine)</button>
+    <button class="rbtn" onclick="gS.step=3;renderGuided()">Post-op complication / readmission</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Non-surgical post-op complications (pneumonia, PE, AKI, stroke, cellulitis, UTI) → Hospitalist primary, ortho consulting as needed.','')">Post-op non-surgical complication (PE, pneumonia, AKI, stroke…)</button>`;
+    return;
+  }
+  if (gS.specialty==='ortho' && gS.step===2 && gS.site==='memorial') {
+    c.innerHTML=`<p class="rq">What type? (Memorial)</p>
+    <button class="rbtn" onclick="gV('specialty','→ Orthopedics PRIMARY (Dr. Jeffrey Smith only)','Elective surgery with Dr. Jeffrey Smith → Ortho primary, hospitalist consult.','No formal co-management agreement with other Memorial ortho groups (independent private practices).')">Elective surgery with Dr. Jeffrey Smith</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','At Memorial, hospitalist is primary for fractures, joint infections, post-op wound infections, and post-op complications. No formal co-management agreement with Memorial ortho groups.','If you are not getting adequate support from the responsible orthopedist, contact Dr. Shadan.')">All other ortho (fractures, joint infections, post-op complications)</button>`;
+    return;
+  }
+  if (gS.specialty==='ortho' && gS.step===3) {
+    c.innerHTML=`<p class="rq">What is the post-op complication? (Green)</p>
+    <button class="rbtn" onclick="gV('specialty','→ Orthopedics PRIMARY','Wound infections, abscesses, and complications requiring return to the OR within 90 days → Ortho primary. Hospitalist consults for medical issues if needed.','Exception: late night admission, stable, no emergent OR — hospitalist may admit as courtesy if comfortable, after direct discussion with on-call orthopedist.')">Wound infection / abscess / needs OR (within 90 days)</button>
+    <button class="rbtn" onclick="gV('warn','⚠ Grey area — discuss with on-call orthopedist','POD 30–60 joint/prosthetic infections are a grey zone. Acceptable for hospitalist to take primary if orthopedist requests it. Call on-call orthopedist directly to discuss.','')">Prosthetic joint infection (POD 30–60)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Non-surgical complications (pneumonia, PE, AKI, stroke, cellulitis, UTI) → Hospitalist primary, ortho consulting as needed.','')">Non-surgical complication (pneumonia, PE, AKI, stroke…)</button>`;
+    return;
+  }
+
+  // BMT
+  if (gS.specialty==='bmt' && gS.step===1) {
+    c.innerHTML=`<p class="rq">BMT / Oncology → Scripps Green</p>
+    <p class="rd">Unless patient has already established care with a non-Green oncologist.</p>
+    <button class="rbtn" onclick="gS.step=2;renderGuided()">Continue ↗</button>`;
+    return;
+  }
+  if (gS.specialty==='bmt' && gS.step===2) {
+    c.innerHTML=`<p class="rq">What is the reason for admission?</p>
+    <button class="rbtn" onclick="gV('specialty','→ BMT PRIMARY','AML/leukemia/lymphoma/myeloma treatment, within 3 months of stem cell transplant, CAR-T within 8 weeks, or recently d/c from BMT with complex/progressive disease → BMT is the service of record.','')">Hematologic issue, transplant-related, CAR-T (&lt;8 wks), relapse/treatment</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Neutropenic fever and non-hematologic issues → Hospitalist primary. BMT/H-O provides timely consultation.','Use BMT order set. Hospitalists manage non-oncologic issues; oncology manages treatment.')">Neutropenic fever or non-hematologic issue</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (attending of record)','Scheduled chemotherapy or bispecific therapy: hospitalist is attending of record once H/O fellow completes and signs the order set. Both teams round daily.','H/O manages all treatment orders. Hospitalist manages non-oncologic issues and completes discharge summary.')">Scheduled chemotherapy / bispecific therapy</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','General oncology admissions (pneumonia, bowel obstruction, cardiac issue, etc.) and stem cell transplant >3 months ago with non-hematologic issue → Hospitalist primary. H/O provides same-day consultation.','')">General oncology admission or transplant &gt;3 months ago</button>`;
+    return;
+  }
+
+  // CARDIOLOGY
+  if (gS.specialty==='cardio' && gS.step===1) {
+    c.innerHTML=`<p class="rq">Cardiology → Scripps Memorial</p>
+    <p class="rd">Most cardiology patients go to Memorial. New-onset heart failure → always Memorial. Only mild established CHF may consider Green.</p>
+    <button class="rbtn" onclick="gS.step=2;renderGuided()">Continue ↗</button>`;
+    return;
+  }
+  if (gS.specialty==='cardio' && gS.step===2) {
+    c.innerHTML=`<p class="rq">What is the cardiac presentation?</p>
+    <button class="rbtn" onclick="gV('specialty','→ Cardiology PRIMARY — Code STEMI','STEMI or STEMI equivalent: activate Code STEMI. Cardiology is primary.','')">STEMI / STEMI equivalent</button>
+    <button class="rbtn" onclick="gV('specialty','→ Cardiology PRIMARY','NSTEMI (not type 2) with rising troponins, or unstable angina with EKG changes / active chest pain possibly needing urgent intervention → Cardiology fellow on-call accepts the admission.','')">NSTEMI or unstable angina with EKG changes</button>
+    <button class="rbtn" onclick="gV('specialty','→ Cardiology PRIMARY','LVAD, unstable arrhythmias, ICD activation, complications of recent cardiac procedures (pacemaker, EP ablation, TAVR), hemodynamically unstable cardiac patients → Cardiology primary.','')">LVAD, unstable arrhythmia, ICD fired, recent cardiac procedure complication</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Stable CHF exacerbation → Hospitalist primary, cardiology consult if needed.','New-onset heart failure must go to Memorial. Only mild established CHF may be considered for Green.')">CHF exacerbation (stable, established)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Hemodynamically stable AF with RVR → Hospitalist primary. Cardiology available for consult.','')">AF with RVR (hemodynamically stable)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (Cardiology consult)','Post-TAVR admission where issue is not cardiac-procedure related → Hospitalist primary with cardiology consulting.','')">Post-TAVR, non-cardiac reason for admission</button>`;
+    return;
+  }
+
+  // VASCULAR
+  if (gS.specialty==='vascular' && gS.step===1) {
+    c.innerHTML=`<p class="rq">What is the vascular presentation? (Green)</p>
+    <button class="rbtn" onclick="gV('specialty','→ Vascular Surgery PRIMARY','Acute limb ischemia → Vascular primary. Hospitalist consults for active medical issues.','')">Acute limb ischemia</button>
+    <button class="rbtn" onclick="gV('specialty','→ Vascular Surgery PRIMARY','Surgery within the past 30 days: all surgical complications → Vascular primary. Hospitalist consults if requested.','')">Post-op complication within 30 days of vascular surgery</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Chronic PAD, rest pain, or gangrene without acute emergency → Hospitalist primary, vascular surgery as consultant.','')">Chronic PAD / rest pain / gangrene (non-acute)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Post-op >30 days with non-surgical complication (e.g. pneumonia) → Hospitalist primary.','')">Post-op &gt;30 days, non-surgical complication</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Dialysis-related complications (other than access created within 30 days), missed dialysis, ESRD volume overload → Hospitalist primary.','Dialysis access consultations are urgent on day of request, emergent the following day.')">Dialysis complication / missed dialysis / ESRD</button>`;
+    return;
+  }
+
+  // GENERAL SURGERY
+  if (gS.specialty==='gsurg' && gS.step===1) {
+    // Site already known — skip to step 2
+    gS.step=2; renderGuided(); return;
+  }
+  if (gS.specialty==='gsurg' && gS.step===2 && gS.site==='green') {
+    c.innerHTML=`<p class="rq">What is the general surgery issue at Green?</p>
+    <button class="rbtn" onclick="gV('specialty','→ General Surgery PRIMARY','Uncomplicated appendicitis or perirectal abscess in a medically simple patient → Admit to GSURG. Hospitalist consults post-op if needed.','If surgeon unavailable (e.g. in OR): PA/fellow assist; UC doc to floor with remote orders; or hospitalist courtesy admit with transfer to GSURG ASAP — requires physician-to-physician discussion.')">Uncomplicated appendicitis / perirectal abscess (medically simple)</button>
+    <button class="rbtn" onclick="gS.step=3;renderGuided()">Acute cholecystitis</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Complex biliary issues (cholangitis, choledocholithiasis, gallstone pancreatitis) → Hospitalist or GI primary. GSURG is NOT reflexively consulted — only if the attending deems necessary.','')">Complex biliary (cholangitis, choledocholithiasis, gallstone pancreatitis)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','SBO, diverticulitis, abdominal pain, partial SBO, ileus → Hospitalist primary. GSURG consulted only if the attending deems it necessary — not reflexively.','Exception: immediate operative intervention planned, or direct transfer accepted by surgeon for urgent surgery → Surgery primary.')">SBO / diverticulitis / abdominal pain / ileus</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (pre-op) → General Surgery PRIMARY (post-op)','Medically complex patient needing pre-op optimization → Hospitalist primary before surgery. After surgery patient transfers to GSURG. Both services remain involved unless mutual agreement to sign off.','')">Medically complex patient needing urgent surgery</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Post-op readmission with a medical complication (PE, pneumonia, etc.) → Hospitalist primary. Surgical service follows until no further surgical intervention needed.','')">Post-op readmission with medical complication</button>
+    <button class="rbtn" onclick="gV('specialty','→ General Surgery PRIMARY','Post-op readmission with a surgical complication (infection, abscess, post-op bowel obstruction) → Surgery is the admitting service. Hospitalist consults for medical co-morbidities.','')">Post-op readmission with surgical complication</button>`;
+    return;
+  }
+  if (gS.specialty==='gsurg' && gS.step===2 && gS.site==='memorial') {
+    c.innerHTML=`<p class="rq">General surgery at Memorial</p>
+    <div class="nbox">At Memorial, general surgery groups are independent and typically do not maintain their own admitting service. Expect to be hospitalist primary for most general surgery admissions.</div>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (General Surgery consult)','At Memorial, hospitalist is primary for appendicitis, cholecystitis, diverticulitis, and SBO with general surgery consulting.','Exception: immediate operative intervention planned, or direct transfer accepted by a surgeon for urgent surgery → Surgery primary.')">Appendicitis / cholecystitis / diverticulitis / SBO</button>`;
+    return;
+  }
+  if (gS.specialty==='gsurg' && gS.step===3) {
+    c.innerHTML=`<p class="rq">Acute cholecystitis at Green — what time is it?</p>
+    <p class="rd">Applies to straightforward cholecystitis: no sepsis, medically simple, diagnosis not in doubt.</p>
+    <button class="rbtn" onclick="gV('specialty','→ General Surgery PRIMARY (6am–9pm)','Straightforward acute cholecystitis daytime → Admit to GSURG. If medical issues arise, patient can remain with hospitalist until surgery, then transfer to GSURG after.','')">6:00 AM – 9:00 PM</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY overnight → Transfer to GSURG in the morning','9pm–6am: Hospitalist admits. Consult GSURG after 6am next morning. Once GSURG sees patient and surgery is planned with no outstanding medical issues, patient transfers. After surgery GSURG discharges; hospitalist consults PRN.','')">9:00 PM – 6:00 AM</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Complex cholecystitis, cholangitis, or sepsis → Hospitalist or GI primary. GSURG not reflexively consulted.','')">Complex / sepsis / cholangitis</button>`;
+    return;
+  }
+
+  // OB
+  if (gS.specialty==='ob' && gS.step===1) {
+    c.innerHTML=`<p class="rq">OB / GYN → Scripps Memorial</p>
+    <p class="rd">Patients under 20 weeks NOT admitted for a pregnancy-related complication may remain at Green.</p>
+    <button class="rbtn" onclick="gS.step=2;renderGuided()">Continue ↗</button>`;
+    return;
+  }
+  if (gS.specialty==='ob' && gS.step===2) {
+    c.innerHTML=`<p class="rq">What is the situation?</p>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (OB consult)','Pregnant ≤20 weeks admitted for a non-pregnancy medical issue → Hospitalist primary, OB consulting.','Non-SCMG patients must be assigned to the Ximed group, not SCMG hospitalists.')">Pregnant ≤20 weeks, admitted for non-pregnancy medical issue</button>
+    <button class="rbtn" onclick="gV('specialty','→ OB PRIMARY (Hospitalist consult)','Pregnant >20 weeks, OR admitted for a pregnancy-related issue at any gestational age → OB primary. Hospitalist is consulting.','Non-SCMG patients must be assigned to the Ximed group, not SCMG hospitalists.')">Pregnant &gt;20 weeks, OR admitted for pregnancy-related issue</button>`;
+    return;
+  }
+
+  // UROLOGY
+  if (gS.specialty==='urology' && gS.step===1) {
+    c.innerHTML=`<p class="rq">What is the urology issue?</p>
+    <p class="rd">Most established Green urology patients should go to Green when possible.</p>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY','Kidney stone → Hospitalist primary. Urology expected to see patient in a timely manner.','No formal co-management agreement with urology.')">Kidney stone</button>
+    <button class="rbtn" onclick="gV('specialty','→ Urology PRIMARY','Post-operative urology complications → Urology primary, unless specifically discussed and agreed otherwise between the attending hospitalist and urologist.','')">Post-op complication</button>`;
+    return;
+  }
+
+  // HEPATOLOGY
+  if (gS.specialty==='hepato' && gS.step===1) {
+    c.innerHTML=`<p class="rq">Most hepatology / GI → Scripps Green</p>
+    <button class="rbtn" onclick="gS.step=2;renderGuided()">Continue ↗</button>`;
+    return;
+  }
+  if (gS.specialty==='hepato' && gS.step===2) {
+    c.innerHTML=`<p class="rq">What is the GI / hepatology issue?</p>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (GI / Hepatology consult)','Most GI and hepatology admissions → Hospitalist primary with GI/hepatology as consultant.','')">General GI / hepatology admission</button>
+    <button class="rbtn" onclick="gV('specialty','→ GI PRIMARY','IBD exacerbation without other active medical problems, complication from a GI procedure, or tertiary GI care → GI is the primary service.','For tertiary GI care: discuss with GI attending to determine which service is most appropriate.')">IBD exacerbation / GI procedure complication / tertiary GI care</button>
+    <button class="rbtn" onclick="gV('specialty','→ Surgical Transplant Team PRIMARY','Within 1 month of liver transplant, or admission related to surgical transplant issues → Surgical transplant team primary.','')">Within 1 month of liver transplant</button>`;
+    return;
+  }
+
+  // TRAUMA
+  if (gS.specialty==='trauma' && gS.step===1) {
+    c.innerHTML=`<p class="rq">Trauma / ACS → Scripps Memorial</p>
+    <p class="rd">The JADE team works exclusively with the trauma service at Memorial.</p>
+    <button class="rbtn" onclick="gS.step=2;renderGuided()">Continue ↗</button>`;
+    return;
+  }
+  if (gS.specialty==='trauma' && gS.step===2) {
+    c.innerHTML=`<p class="rq">What is the situation?</p>
+    <button class="rbtn" onclick="gV('specialty','→ Trauma PRIMARY (Hospitalist consult)','Most acute trauma → Trauma primary with hospitalist consulting.','')">Acute trauma</button>
+    <button class="rbtn" onclick="gV('warn','⚠ Case-by-case — discuss with trauma team','For minor trauma, trauma may ask hospitalist to be primary with trauma consulting. Evaluate individually.','')">Minor trauma (trauma requesting hospitalist primary)</button>
+    <button class="rbtn" onclick="gV('primary','✓ Hospitalist PRIMARY (Trauma / ACS consult)','General surgery issues via ACS (cholecystitis, appendicitis, diverticulitis, SBO): often hospitalist primary. Trauma/ACS handles all surgical management and operative/post-discharge orders.','')">General surgery issue via ACS (cholecystitis, appendicitis, SBO…)</button>
+    <button class="rbtn" onclick="gV('warn','⚠ Case-by-case — discuss with trauma team','For prolonged hospital stays, trauma may ask hospitalist to take over as primary. Evaluate case by case.','')">Prolonged stay, trauma requesting handoff</button>`;
+    return;
+  }
+
+  // ICU
+  if (gS.specialty==='icu' && gS.step===1) {
+    gV('warn','⚠ ICU is closed — hospitalists do not manage ICU-level patients','The ICU at both Green and Memorial is a closed unit. The ICU team manages all patients until they have physically left the ICU.','Exception: at Green, overflow patients boarded in the ICU are managed by the hospitalist team at med/surg level of care only — not ICU level.');
+  }
+}
+
+function getSiteWarning() {
+  const site = gS.site;
+  if (site === 'green') {
+    return `<div class="site-banner green-banner">
+      <strong>🏥 Scripps Green</strong>
+      <div class="site-rules">
+        <div class="site-rule wrong">⚠️ <strong>Usually Memorial:</strong> General surgery (appendicitis, cholecystitis, diverticulitis, SBO) · New-onset heart failure · Most cardiology · OB/GYN</div>
+        <div class="site-rule ok">✓ <strong>Green is appropriate for:</strong> Orthopedics · BMT / Oncology · Hepatology / GI · Vascular surgery · Established Green urology · Mild stable CHF</div>
+        <div class="site-rule neutral">ℹ️ Stress tests are challenging at Green · MRI with pacer or needing anesthesia is easier at Memorial</div>
+      </div>
+    </div>`;
+  }
+  if (site === 'memorial') {
+    return `<div class="site-banner memorial-banner">
+      <strong>🏨 Scripps Memorial / La Jolla</strong>
+      <div class="site-rules">
+        <div class="site-rule ok">✓ <strong>Memorial is appropriate for:</strong> General surgery · Cardiology · New-onset heart failure · OB/GYN · Trauma / ACS · Most urology</div>
+        <div class="site-rule wrong">⚠️ <strong>Usually Green:</strong> BMT / Oncology · Hepatology / GI · Orthopedics (most) · Established Green patients when possible</div>
+      </div>
+    </div>`;
+  }
+  if (site === 'transfer') {
+    return `<div class="site-banner transfer-banner">
+      <strong>🚗 Outside hospital transfer</strong>
+      <div class="site-rules">
+        <div class="site-rule neutral">ℹ️ For transfers, determine the correct Scripps site before accepting. The transfer center calls orthopedics first for ortho transfers; hospitalist then discusses with outside MD and admits. For H/O patients, the H/O team verifies eligibility and coordinates with the transfer center.</div>
+      </div>
+    </div>`;
+  }
+  return '';
+}
+
+function gPick(specialty) {
+  // Before proceeding, check if the site is appropriate for this specialty
+  const warnings = getSiteSpecialtyMismatch(specialty);
+  if (warnings) {
+    const c = document.getElementById('guided');
+    const rb = document.getElementById('rreset');
+    if (rb) rb.style.display='inline';
+    c.innerHTML = warnings;
+    return;
+  }
+  gS.specialty=specialty; gS.step=1; renderGuided();
+}
+
+function getSiteSpecialtyMismatch(specialty) {
+  const site = gS.site;
+
+  // General surgery at Green — needs a site check first
+  if (specialty === 'gsurg' && site === 'green') {
+    return `<div class="vcard warn">
+      <h3>⚠️ Consider Memorial first for general surgery</h3>
+      <p>Most general surgery patients (appendicitis, cholecystitis, diverticulitis, SBO) should go to Memorial unless:
+• The patient has established care with a surgeon at Scripps Green
+• Memorial is at capacity
+
+If the patient truly belongs at Green, proceed below.</p>
+    </div>
+    <button class="rbtn" onclick="gS.specialty='gsurg';gS.step=1;renderGuided()">Patient belongs at Green — continue with Green general surgery</button>
+    <button class="rbtn" onclick="gS.site='memorial';gS.step='0b';renderGuided()">Switch to Memorial</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  // Cardiology at Green
+  if (specialty === 'cardio' && site === 'green') {
+    return `<div class="vcard warn">
+      <h3>⚠️ Most cardiology patients should go to Memorial</h3>
+      <p>New-onset heart failure must always be admitted at Memorial, not Green.
+
+Only mild, established CHF exacerbations may be considered for Green.
+
+If this is a non-CHF cardiac issue, it should also generally go to Memorial.</p>
+    </div>
+    <button class="rbtn" onclick="gS.specialty='cardio';gS.step=1;renderGuided()">Patient has mild stable CHF — continue at Green</button>
+    <button class="rbtn" onclick="gS.site='memorial';gS.step='0b';renderGuided()">Switch to Memorial</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  // BMT / Oncology at Memorial
+  if (specialty === 'bmt' && site === 'memorial') {
+    return `<div class="vcard warn">
+      <h3>⚠️ BMT / Oncology patients should go to Scripps Green</h3>
+      <p>All BMT patients and most oncology patients should go to Scripps Green unless the patient has already established care with a non-Green oncologist.</p>
+    </div>
+    <button class="rbtn" onclick="gS.site='green';gS.specialty='bmt';gS.step=1;renderGuided()">Switch to Green</button>
+    <button class="rbtn" onclick="gS.specialty='bmt';gS.step=1;renderGuided()">Patient is established with a non-Green oncologist — continue at Memorial</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  // OB/GYN at Green
+  if (specialty === 'ob' && site === 'green') {
+    return `<div class="vcard warn">
+      <h3>⚠️ OB / GYN patients generally go to Memorial</h3>
+      <p>All OB and GYN patients should go to Memorial.
+
+Exception: patients under 20 weeks gestation NOT admitted for a pregnancy-related complication may remain at Green.</p>
+    </div>
+    <button class="rbtn" onclick="gS.specialty='ob';gS.step=1;renderGuided()">Patient is ≤20 weeks, non-pregnancy issue — continue at Green</button>
+    <button class="rbtn" onclick="gS.site='memorial';gS.step='0b';renderGuided()">Switch to Memorial</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  // Hepatology at Memorial
+  if (specialty === 'hepato' && site === 'memorial') {
+    return `<div class="vcard warn">
+      <h3>⚠️ Most hepatology / GI patients should go to Scripps Green</h3>
+      <p>Most hepatology and GI patients should be admitted at Scripps Green.</p>
+    </div>
+    <button class="rbtn" onclick="gS.site='green';gS.specialty='hepato';gS.step=1;renderGuided()">Switch to Green</button>
+    <button class="rbtn" onclick="gS.specialty='hepato';gS.step=1;renderGuided()">Continue at Memorial anyway</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  // Trauma at Green
+  if (specialty === 'trauma' && site === 'green') {
+    return `<div class="vcard warn">
+      <h3>⚠️ Trauma / ACS patients go to Scripps Memorial</h3>
+      <p>The JADE team and trauma service are at Scripps Memorial. Trauma and ACS patients should go to Memorial.</p>
+    </div>
+    <button class="rbtn" onclick="gS.site='memorial';gS.specialty='trauma';gS.step=1;renderGuided()">Switch to Memorial</button>
+    <button class="rbtn" onclick="resetRoute()">↺ Start over</button>`;
+  }
+
+  return null; // no mismatch
+}
+
+function gV(type, title, reason, nuance) {
+  const c = document.getElementById('guided');
+  const rb = document.getElementById('rreset');
+  if (rb) rb.style.display='inline';
+  c.innerHTML=`
+    <div class="vcard ${type}"><h3>${title}</h3><p>${reason}</p></div>
+    ${nuance ? `<div class="nbox">⚠️ ${nuance}</div>` : ''}
+    <button class="rbtn" style="margin-top:4px" onclick="resetRoute()">↺ Start over</button>
+  `;
+}
+
+
+
+// ══ DAYTIME SURGE ══
+let dS={step:0,site:null,hosp:0,census:0,date:null};
+function resetDay(){dS={step:0,site:null,hosp:0,census:0,date:null};renderDay();}
+function renderDay(){
+  const c=document.getElementById('dc'); c.innerHTML='';
+  if(dS.step===0){
+    c.innerHTML=`<p class="sq">Which site needs surge?</p><p class="sd">Select your location to begin.</p>
+    <button class="obtn" onclick="dS.site='green';dS.step=1;renderDay()">🏥 Scripps Green (Non-Teach)</button>
+    <button class="obtn" onclick="dS.site='memorial';dS.step=1;renderDay()">🏨 Scripps Memorial / La Jolla (Teach)</button>`;
+    return;
+  }
+  if(dS.step===1&&dS.site==='green'){
+    c.innerHTML=`<p class="sq">Enter your numbers</p>
+    <div class="rbox"><strong>Before entering census, exclude:</strong><br>• ICU patients (unless called out and actively followed by the hospitalist service)<br>• Red Team patients<br>• New orthopedic co-management patients<br><br><strong>Note:</strong> Enter your total hospitalists including Red Team — the Red Team hospitalist (always 1) is automatically subtracted from the threshold calculation.</div>
+    <div class="nr"><label>Hospitalists on service (incl. Red Team)</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 6"></div>
+    <div class="nr"><label>Eligible census (after exclusions)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 87"></div>
+    <button class="gbtn" onclick="submitGreen()">Calculate ↗</button>`;
+    return;
+  }
+  if(dS.step===1&&dS.site==='memorial'){
+    c.innerHTML=`<p class="sq">Enter your numbers</p>
+    <div class="rbox"><strong>Before entering census, exclude:</strong><br>• ICU patients (unless called out and actively followed by the hospitalist service)</div>
+    <div class="nr"><label>Hospitalists on service</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 7"></div>
+    <div class="nr"><label>Eligible census (after exclusion)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 97"></div>
+    <div class="nr"><label>Today's date</label><input type="date" id="d-date" value="${new Date().toISOString().split('T')[0]}"></div>
+    <button class="gbtn" onclick="submitMemorial()">Continue ↗</button>`;
+    return;
+  }
+  if(dS.step===2&&dS.site==='memorial'){
+    const {adj,adjLabel,threshold}=getMemAdj();
+    c.innerHTML=`<p class="sq">Verify prerequisites</p>
+    <p class="sd">All three must be confirmed before surge can activate at Scripps Memorial.</p>
+    <div class="mbox">Resident adjustment: −${adj} (${adjLabel})\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\nYour eligible census: ${dS.census}</div>
+    <div class="crow"><input type="checkbox" id="c1"><label for="c1">All non-teaching teams have at least 12 patients</label></div>
+    <div class="crow"><input type="checkbox" id="c2"><label for="c2">All resident services have been backfilled to maximum capacity</label></div>
+    <div class="crow"><input type="checkbox" id="c3"><label for="c3">Scripps Green does NOT currently require surge</label></div>
+    <button class="gbtn" style="margin-top:4px" onclick="checkPrereqs()">Check eligibility ↗</button>`;
+    return;
+  }
+  if(dS.step===3){
+    let threshold,math,can;
+    if(dS.site==='green'){
+      const eligibleHosp = dS.hosp - 1; // always subtract 1 for Red Team
+      threshold=eligibleHosp*14; can=dS.census>=threshold;
+      math=`Hospitalists on service (total): ${dS.hosp}\n− Red Team hospitalist: 1 (always excluded)\nEligible hospitalists: ${eligibleHosp}\nEligible census (excl. ICU, Red Team, new ortho): ${dS.census}\n\nSurge threshold: ${eligibleHosp} × 14 = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
+    } else {
+      const {adj,adjLabel}=getMemAdj(); threshold=(dS.hosp*14)-adj; can=dS.census>=threshold;
+      math=`Hospitalists on service: ${dS.hosp}\nEligible census (excl. ICU not actively followed): ${dS.census}\n\nResident adjustment: −${adj} (${adjLabel})\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
+    }
+    c.innerHTML=`<div class="res ${can?'yes':'no'}"><h3>${can?'✓ Surge may be activated':'✗ Surge criteria not met'}</h3>
+    <p>${can?'All criteria are met. Contact the surge hospitalist and prepare the patient list. Must call in before 8:00 AM.':'The eligible census does not meet the surge threshold. Continue monitoring.'}</p></div>
+    <div class="mbox">${math}</div>
+    ${can?`<div class="res info"><h3>Reminders before activating</h3><p>• Assign lowest-complexity patients to surge\n• Surge max: 10 patients (13 if they voluntarily agree)\n• Surge census cannot exceed non-surge teams\n• Must call in before 8:00 AM\n• If both sites qualify, surge goes to Green (no residents)\n• Pending transfers expected by 10am CAN count toward census</p></div>`:''}
+    <button class="reset-btn" style="margin-top:8px" onclick="resetDay()">↺ Start over</button>`;
+  }
+}
+function getMemAdj(){
+  const d=new Date(dS.date),yr=d.getFullYear();
+  const s=new Date(`${yr}-06-16`),e=new Date(`${yr}-08-10`);
+  const adj=(d>=s&&d<=e)?3:2;
+  return {adj,adjLabel:adj===3?'baby caps: June 16–Aug 10':'standard: Aug 11–June 15',threshold:(dS.hosp*14)-adj};
+}
+function submitGreen(){
+  const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
+  if(!h||!c){alert('Please fill in both fields.');return;}
+  dS.hosp=h;dS.census=c;dS.step=3;renderDay();
+}
+function submitMemorial(){
+  const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
+  if(!h||!c){alert('Please fill in all fields.');return;}
+  dS.hosp=h;dS.census=c;dS.date=document.getElementById('d-date').value;dS.step=2;renderDay();
+}
+function checkPrereqs(){
+  const ok=document.getElementById('c1').checked&&document.getElementById('c2').checked&&document.getElementById('c3').checked;
+  if(!ok){
+    const m=[];
+    if(!document.getElementById('c1').checked)m.push('All non-teaching teams must have ≥ 12 patients');
+    if(!document.getElementById('c2').checked)m.push('Resident services must be backfilled to maximum capacity');
+    if(!document.getElementById('c3').checked)m.push('Scripps Green must not currently require surge');
+    document.getElementById('dc').innerHTML=`<div class="res no"><h3>✗ Surge cannot be activated</h3>
+    <p>Prerequisites not met:\n\n${m.map(x=>'• '+x).join('\n')}\n\nIf surge is called in anyway, the difference must be made up by daytime teams.</p></div>
+    <button class="reset-btn" style="margin-top:8px" onclick="resetDay()">↺ Start over</button>`;
+    return;
+  }
+  dS.step=3;renderDay();
+}
+
+
+
+// ══ PM SURGE ══
+let pS={step:0,site:null,time:null};
+function resetPM(){pS={step:0,site:null,time:null};renderPM();}
+function renderPM(){
+  const c=document.getElementById('pc');c.innerHTML='';
+  if(pS.step===0){
+    c.innerHTML=`<p class="sq">What time are you checking?</p><p class="sd">PM Surge is Monday–Friday only. Call-in window is 5:00 PM – 7:30 PM.</p>
+    <button class="obtn" onclick="pS.time='5pm';pS.step=1;renderPM()">At 5:00 PM (on the dot)</button>
+    <button class="obtn" onclick="pS.time='after5';pS.step=1;renderPM()">After 5:00 PM but before 7:30 PM</button>
+    <button class="obtn" onclick="pmOOW()">After 7:30 PM or before 5:00 PM</button>`;
+    return;
+  }
+  if(pS.step===1){
+    c.innerHTML=`<p class="sq">Which site?</p>
+    <button class="obtn" onclick="pS.site='lj';pS.step=2;renderPM()">🏨 La Jolla / Scripps Memorial — has priority</button>
+    <button class="obtn" onclick="pS.site='green';pS.step=2;renderPM()">🏥 Scripps Green — must check LJ first</button>`;
+    return;
+  }
+  if(pS.step===2&&pS.site==='lj'){
+    const thr=pS.time==='5pm'?7:8;
+    c.innerHTML=`<p class="sq">How many admits does LJ PM have?</p>
+    <p class="sd">${pS.time==='5pm'?'At 5:00 PM: LJ qualifies with 7 or more admits.':'After 5:00 PM: LJ qualifies with 8 or more admits.'}</p>
+    <div class="nr"><label>LJ PM admits so far</label><input type="number" id="pm-lj" min="0" placeholder="e.g. 8"></div>
+    <button class="gbtn" onclick="calcLJ(${thr})">Calculate ↗</button>`;
+    return;
+  }
+  if(pS.step===2&&pS.site==='green'){
+    c.innerHTML=`<p class="sq">Has LJ been checked first?</p>
+    <p class="sd">LJ always has priority. Confirm with the LJ PM hospitalist before activating Green PM Surge.</p>
+    <button class="obtn" onclick="pS.step=3;renderPM()">Yes — confirmed with LJ PM hospitalist</button>
+    <button class="obtn" onclick="document.getElementById('pc').innerHTML='<div class=\\'res warn\\'><h3>⚠ Check LJ first</h3><p>Contact the LJ PM hospitalist to confirm they do not meet PM Surge criteria before activating Green.</p></div><button class=\\'reset-btn\\' style=\\'margin-top:8px\\' onclick=\\'resetPM()\\'>↺ Restart</button>'">No — haven't checked yet</button>`;
+    return;
+  }
+  if(pS.step===3&&pS.site==='green'){
+    c.innerHTML=`<p class="sq">Does LJ meet PM Surge criteria?</p>
+    <button class="obtn" onclick="document.getElementById('pc').innerHTML='<div class=\\'res no\\'><h3>✗ Green PM Surge not available</h3><p>LJ has priority and is activating PM Surge. Green may not activate.</p></div><button class=\\'reset-btn\\' style=\\'margin-top:8px\\' onclick=\\'resetPM()\\'>↺ Start over</button>'">LJ qualifies — they are activating PM Surge</button>
+    <button class="obtn" onclick="pS.step=4;renderPM()">LJ does NOT qualify — check Green census</button>`;
+    return;
+  }
+  if(pS.step===4&&pS.site==='green'){
+    c.innerHTML=`<p class="sq">Calculate Green PM census</p>
+    <p class="sd">Ortho patients count as 0.5. Green qualifies if PM census ≥ 16 by 7:30 PM.</p>
+    <div class="nr"><label>Non-ortho PM patients at Green</label><input type="number" id="g-no" min="0" placeholder="e.g. 12"></div>
+    <div class="nr"><label>Ortho PM patients at Green</label><input type="number" id="g-o" min="0" placeholder="e.g. 6"></div>
+    <button class="gbtn" onclick="calcGreenPM()">Calculate ↗</button>`;
+    return;
+  }
+}
+function pmOOW(){document.getElementById('pc').innerHTML=`<div class="res no"><h3>✗ Outside call-in window</h3><p>PM Surge can only be called in between 5:00 PM and 7:30 PM.\n\nIf getting busy after the window closes (e.g. 4 admits at 8 PM), you may request a shift extension instead.</p></div><button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Restart</button>`;}
+function calcLJ(thr){
+  const a=parseInt(document.getElementById('pm-lj').value)||0,ok=a>=thr;
+  document.getElementById('pc').innerHTML=`<div class="res ${ok?'yes':'no'}"><h3>${ok?'✓ LJ PM Surge approved':'✗ LJ PM Surge criteria not met'}</h3><p>${ok?'LJ meets the threshold. PM Surge may be activated.':'LJ does not meet the threshold. PM Surge cannot be activated at this time.'}</p></div>
+  <div class="mbox">LJ PM admits: ${a}\nThreshold: ${thr} (${pS.time==='5pm'?'at 5:00 PM':'after 5 PM, before 7:30 PM'})\n${a} ${ok?'≥':'<'} ${thr}  →  ${ok?'Qualifies':'Does not qualify'}</div>
+  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, usually 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• Ask surge how many patients they are willing to see\n• Surge cross-covers until 10 PM</p></div>`:''}
+  <button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Start over</button>`;
+}
+function calcGreenPM(){
+  const no=parseInt(document.getElementById('g-no').value)||0,o=parseInt(document.getElementById('g-o').value)||0;
+  const cen=no+(o*0.5),ok=cen>=16;
+  document.getElementById('pc').innerHTML=`<div class="res ${ok?'yes':'no'}"><h3>${ok?'✓ Green PM Surge approved':'✗ Green PM Surge criteria not met'}</h3><p>${ok?'Green PM census meets threshold. PM Surge may be activated.':'Green PM census is below 16. PM Surge cannot be activated.'}</p></div>
+  <div class="mbox">Non-ortho PM patients: ${no} × 1.0 = ${no}\nOrtho PM patients:    ${o} × 0.5 = ${(o*0.5).toFixed(1)}\n──────────────────────────\nGreen PM census: ${cen.toFixed(1)}\nThreshold: 16\n${cen.toFixed(1)} ${ok?'≥':'<'} 16  →  ${ok?'Qualifies':'Does not qualify'}</div>
+  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, usually 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• Ask surge how many patients they are willing to see\n• Surge cross-covers until 10 PM</p></div>`:''}
+  <button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Start over</button>`;
+}
+
+
+
+
+renderGuided();
+renderDay();
+
+// ── FEEDBACK ──
+function submitFeedback() {
+  const section = document.getElementById('fb-section').value;
+  const question = document.getElementById('fb-question').value.trim();
+  const issue = document.getElementById('fb-issue').value.trim();
+  const name = document.getElementById('fb-name').value.trim();
+  const result = document.getElementById('fb-result');
+
+  if (!section || !question || !issue) {
+    result.innerHTML = '<div class="res warn" style="margin-top:8px"><h3>⚠ Please fill in all required fields</h3><p>Section, question, and issue description are all required.</p></div>';
+    return;
+  }
+
+  // Build feedback email
+  const subject = encodeURIComponent('HospitalistOps Tool Feedback — ' + section);
+  const body = encodeURIComponent(
+    'FEEDBACK REPORT\n' +
+    '================\n\n' +
+    'Section: ' + section + '\n\n' +
+    'Question / Scenario:\n' + question + '\n\n' +
+    'Issue with answer:\n' + issue + '\n\n' +
+    'Submitted by: ' + (name || 'Anonymous') + '\n' +
+    'Date: ' + new Date().toLocaleDateString()
+  );
+
+  // Copy to clipboard as fallback
+  const feedbackText =
+    'FEEDBACK REPORT\n' +
+    '================\n\n' +
+    'Section: ' + section + '\n\n' +
+    'Question / Scenario:\n' + question + '\n\n' +
+    'Issue with answer:\n' + issue + '\n\n' +
+    'Submitted by: ' + (name || 'Anonymous') + '\n' +
+    'Date: ' + new Date().toLocaleDateString();
+
+  // Open mailto link
+  const mailtoLink = 'mailto:brtennis01@gmail.com?subject=' + subject + '&body=' + body;
+  window.location.href = mailtoLink;
+
+  // Show confirmation and clear form
+  result.innerHTML = '<div class="res yes" style="margin-top:8px"><h3>✓ Email draft opened</h3><p>Your email app should have opened with the feedback pre-filled. Just hit Send. Thank you for helping improve this tool!</p></div>';
+  document.getElementById('fb-section').value = '';
+  document.getElementById('fb-question').value = '';
+  document.getElementById('fb-issue').value = '';
+  document.getElementById('fb-name').value = '';
+}
+</script>
+</body>
+</html>
