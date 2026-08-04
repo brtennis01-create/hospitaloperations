@@ -164,6 +164,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-pm" onclick="show('pm')">
       <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> PM surge trial
     </div>
+    <div class="nav-item" id="nav-sched" onclick="show('sched')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Schedule
+    </div>
     <div class="nav-item" id="nav-route" onclick="show('route')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/></svg> Patient routing
     </div>
@@ -487,6 +490,45 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="pfoot">Feedback is emailed directly to brtennis01@gmail.com for review</div>
     </div>
 
+    <!-- SCHEDULE -->
+    <div class="panel" id="panel-sched">
+      <div class="ph"><h1>Schedule</h1><span class="badge">Jun 29 &ndash; Aug 30, 2026 loaded</span></div>
+      <div class="rtabs">
+        <button class="rtab active" id="schtab-lookup" onclick="switchSchTab('lookup')">Look up shifts</button>
+        <button class="rtab" id="schtab-gen" onclick="switchSchTab('gen')">Generate draft</button>
+      </div>
+
+      <div class="rpane active" id="schpane-lookup">
+        <div class="rpane-scroll">
+          <div class="sq">Search by date</div>
+          <div class="nr"><label>Date</label><input type="date" id="sch-date" value="2026-06-29" min="2026-06-29" max="2026-08-30" onchange="lookupByDate()"></div>
+          <div id="sch-date-result"></div>
+
+          <div class="sq" style="margin-top:18px">Search by provider</div>
+          <div class="nr">
+            <label>Provider</label>
+            <select id="sch-provider" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none" onchange="lookupByProvider()">
+              <option value="">Select a provider...</option>
+            </select>
+          </div>
+          <div id="sch-provider-result"></div>
+        </div>
+      </div>
+
+      <div class="rpane" id="schpane-gen">
+        <div class="rpane-scroll">
+          <div class="sq">Generate a draft schedule</div>
+          <div class="sd">Runs the greedy round-robin algorithm using each provider's FTE target. Produces a fair draft &mdash; review before finalizing on Amion.</div>
+          <div class="nr"><label>Start date</label><input type="date" id="gen-start" value="2026-09-01"></div>
+          <div class="nr"><label>End date</label><input type="date" id="gen-end" value="2026-09-30"></div>
+          <button class="gbtn" onclick="generateDraft()">Generate draft schedule &rarr;</button>
+          <div id="gen-result" style="margin-top:14px"></div>
+        </div>
+      </div>
+
+      <div class="pfoot">Lookup data reflects the schedule as of upload &middot; Generated drafts are a starting point, not final</div>
+    </div>
+
     <!-- DAYTIME SURGE -->
     <div class="panel" id="panel-day">
       <div class="ph"><h1>Daytime surge activation</h1><button class="reset-btn" onclick="resetDay()">↺ Restart</button></div>
@@ -498,7 +540,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="panel" id="panel-pm">
       <div class="ph"><h1>PM surge trial (starts 6/16/26)</h1><button class="reset-btn" onclick="resetPM()">↺ Restart</button></div>
       <div class="sscroll" id="pc"></div>
-      <div class="pfoot">⏰ Call-in window: 5:00 PM – 7:30 PM · Shift ends 10:00 PM</div>
+      <div class="pfoot">⏰ Call-in window: 5:00 PM – 8:00 PM · Last admit 9:00 PM · Shift ends 10:00 PM</div>
     </div>
 
   </div>
@@ -509,13 +551,21 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help'].forEach(n => {
+  ['qa','day','pm','route','onboard','help','sched'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
   if (name==='day') renderDay();
   if (name==='pm') renderPM();
   if (name==='route') renderGuided();
+  if (name==='sched') initSchedule();
+}
+
+function switchSchTab(tab) {
+  ['lookup','gen'].forEach(t => {
+    document.getElementById('schtab-'+t).className = 'rtab'+(t===tab?' active':'');
+    document.getElementById('schpane-'+t).className = 'rpane'+(t===tab?' active':'');
+  });
 }
 
 function switchRTab(tab) {
@@ -568,7 +618,7 @@ SHIFT DEFINITIONS:
 - Teach PM: 3pm–11pm. Calls for new admissions 3–9pm. Cross covers own patients until 11pm. Max 8 patients.
 - Night shift (HS): 9pm–7am. Admitting and cross cover. Last admit by 6:30am. Max 7 admits at non-teach, 8 at teach.
 - Surge dayshift: Voluntary. $300 standby fee. $1900 weekday / $2100 weekend. See 10 patients (up to 13 voluntary, $200/patient for 11-13).
-- Surge PM: Voluntary. $500 standby fee. 5–10pm Mon–Fri. $250/admit. Min 3, expected 4, max 5.
+- Surge PM (updated 8/3/26): Voluntary. $500 standby fee. Call-in window 5–8pm Mon–Fri. Last admit 9pm, shift ends 10pm. $250/admit. Min 3, expected 4, max 5. Called in at 7pm+: max 3.
 - Jeopardy: Assigned ~once/month. Available for day/evening/night coverage if someone is sick. One shift only — cannot cover two shifts same day.
 - Shift extension: Extra pay when you exceed max patient volume. $200/admit after cap.
 
@@ -757,7 +807,7 @@ function opsEngine(q) {
     return "📋 Shift extension — $200 per admit after your cap:\n\n🌞 PM shift (both sites): After 8 patients\n🌙 HS night teach: After 8 patients\n🌙 HS night non-teach: After 7 patients\n🌅 Day non-teach: After 2pm if you have already seen 13+ patients\n⚡ Surge: After 10 → $200 per patient for 11, 12, 13 (voluntary, Ericka asks)\n\n📞 Contact Ericka Martin to arrange shift extension.";
 
   if (has('surge pay','standby','how much does surge','surge compensation','surge fee') || (has('$') && has('surge')))
-    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge:\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Mon–Fri 5–10pm only\n\n📞 Sign up via Ericka Martin.";
+    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge (updated 8/3/26):\n• Call-in window: 5:00–8:00 PM, Mon–Fri\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n\n📞 Sign up via Ericka Martin.";
 
   if (has('jeopardy'))
     return "📋 Jeopardy:\n\nAssigned approximately once a month. You must be available to cover day, evening, or night shifts if someone calls in sick.\n\n• You will only be called for ONE shift per day — not two shifts in the same day.\n• Check AMION for the jeopardy schedule.\n• Contact Liesbet Joris Quinton (LJQ) if you cannot work a scheduled day.";
@@ -1542,10 +1592,10 @@ function resetPM(){pS={step:0,site:null,time:null};renderPM();}
 function renderPM(){
   const c=document.getElementById('pc');c.innerHTML='';
   if(pS.step===0){
-    c.innerHTML=`<p class="sq">What time are you checking?</p><p class="sd">PM Surge is Monday–Friday only. Call-in window is 5:00 PM – 7:30 PM.</p>
+    c.innerHTML=`<p class="sq">What time are you checking?</p><p class="sd">PM Surge is Monday–Friday only. Call-in window is 5:00 PM – 8:00 PM. Shift ends 10pm, last admit 9pm.</p>
     <button class="obtn" onclick="pS.time='5pm';pS.step=1;renderPM()">At 5:00 PM (on the dot)</button>
-    <button class="obtn" onclick="pS.time='after5';pS.step=1;renderPM()">After 5:00 PM but before 7:30 PM</button>
-    <button class="obtn" onclick="pmOOW()">After 7:30 PM or before 5:00 PM</button>`;
+    <button class="obtn" onclick="pS.time='after5';pS.step=1;renderPM()">After 5:00 PM but before 8:00 PM</button>
+    <button class="obtn" onclick="pmOOW()">After 8:00 PM or before 5:00 PM</button>`;
     return;
   }
   if(pS.step===1){
@@ -1557,7 +1607,7 @@ function renderPM(){
   if(pS.step===2&&pS.site==='lj'){
     const thr=pS.time==='5pm'?7:8;
     c.innerHTML=`<p class="sq">How many admits does LJ PM have?</p>
-    <p class="sd">${pS.time==='5pm'?'At 5:00 PM: LJ qualifies with 7 or more admits.':'After 5:00 PM: LJ qualifies with 8 or more admits.'}</p>
+    <p class="sd">${pS.time==='5pm'?'At 5:00 PM: LJ qualifies with 7 or more admits.':'After 5:00 PM and before 8:00 PM: LJ qualifies with 8 or more admits.'}</p>
     <div class="nr"><label>LJ PM admits so far</label><input type="number" id="pm-lj" min="0" placeholder="e.g. 8"></div>
     <button class="gbtn" onclick="calcLJ(${thr})">Calculate ↗</button>`;
     return;
@@ -1577,19 +1627,19 @@ function renderPM(){
   }
   if(pS.step===4&&pS.site==='green'){
     c.innerHTML=`<p class="sq">Calculate Green PM census</p>
-    <p class="sd">Ortho patients count as 0.5. Green qualifies if PM census ≥ 16 by 7:30 PM.</p>
+    <p class="sd">Ortho patients count as 0.5. Green qualifies if PM census ≥ 16 by 8:00 PM.</p>
     <div class="nr"><label>Non-ortho PM patients at Green</label><input type="number" id="g-no" min="0" placeholder="e.g. 12"></div>
     <div class="nr"><label>Ortho PM patients at Green</label><input type="number" id="g-o" min="0" placeholder="e.g. 6"></div>
     <button class="gbtn" onclick="calcGreenPM()">Calculate ↗</button>`;
     return;
   }
 }
-function pmOOW(){document.getElementById('pc').innerHTML=`<div class="res no"><h3>✗ Outside call-in window</h3><p>PM Surge can only be called in between 5:00 PM and 7:30 PM.\n\nIf getting busy after the window closes (e.g. 4 admits at 8 PM), you may request a shift extension instead.</p></div><button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Restart</button>`;}
+function pmOOW(){document.getElementById('pc').innerHTML=`<div class="res no"><h3>✗ Outside call-in window</h3><p>PM Surge can only be called in between 5:00 PM and 8:00 PM.\n\nIf getting busy after the window closes (e.g. 4 admits at 8 PM), you may request a shift extension instead.</p></div><button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Restart</button>`;}
 function calcLJ(thr){
   const a=parseInt(document.getElementById('pm-lj').value)||0,ok=a>=thr;
   document.getElementById('pc').innerHTML=`<div class="res ${ok?'yes':'no'}"><h3>${ok?'✓ LJ PM Surge approved':'✗ LJ PM Surge criteria not met'}</h3><p>${ok?'LJ meets the threshold. PM Surge may be activated.':'LJ does not meet the threshold. PM Surge cannot be activated at this time.'}</p></div>
-  <div class="mbox">LJ PM admits: ${a}\nThreshold: ${thr} (${pS.time==='5pm'?'at 5:00 PM':'after 5 PM, before 7:30 PM'})\n${a} ${ok?'≥':'<'} ${thr}  →  ${ok?'Qualifies':'Does not qualify'}</div>
-  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, usually 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• Ask surge how many patients they are willing to see\n• Surge cross-covers until 10 PM</p></div>`:''}
+  <div class="mbox">LJ PM admits: ${a}\nThreshold: ${thr} (${pS.time==='5pm'?'at 5:00 PM':'after 5 PM, before 8:00 PM'})\n${a} ${ok?'≥':'<'} ${thr}  →  ${ok?'Qualifies':'Does not qualify'}</div>
+  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• PM hospitalist prioritizes lower complexity admits to surge\n• Ask surge how many patients they are willing to see\n• Surge cross-covers own patients until 10 PM</p></div>`:''}
   <button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Start over</button>`;
 }
 function calcGreenPM(){
@@ -1597,7 +1647,7 @@ function calcGreenPM(){
   const cen=no+(o*0.5),ok=cen>=16;
   document.getElementById('pc').innerHTML=`<div class="res ${ok?'yes':'no'}"><h3>${ok?'✓ Green PM Surge approved':'✗ Green PM Surge criteria not met'}</h3><p>${ok?'Green PM census meets threshold. PM Surge may be activated.':'Green PM census is below 16. PM Surge cannot be activated.'}</p></div>
   <div class="mbox">Non-ortho PM patients: ${no} × 1.0 = ${no}\nOrtho PM patients:    ${o} × 0.5 = ${(o*0.5).toFixed(1)}\n──────────────────────────\nGreen PM census: ${cen.toFixed(1)}\nThreshold: 16\n${cen.toFixed(1)} ${ok?'≥':'<'} 16  →  ${ok?'Qualifies':'Does not qualify'}</div>
-  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, usually 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• Ask surge how many patients they are willing to see\n• Surge cross-covers until 10 PM</p></div>`:''}
+  ${ok?`<div class="res info"><h3>Reminders</h3><p>• Non-teach admits only\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500 · $250 per patient seen\n• PM hospitalist still sees ≥ 8 patients\n• PM hospitalist prioritizes lower complexity admits to surge\n• Ask surge how many patients they are willing to see\n• Surge cross-covers own patients until 10 PM</p></div>`:''}
   <button class="reset-btn" style="margin-top:8px" onclick="resetPM()">↺ Start over</button>`;
 }
 
@@ -1653,6 +1703,433 @@ function submitFeedback() {
   document.getElementById('fb-issue').value = '';
   document.getElementById('fb-name').value = '';
 }
+
+
+// ===== SCHEDULE DATA (uploaded) =====
+// scheduleConstants.js
+// Scripps Hospitalist Group — Schedule Data & Provider Config
+// Drop into your project's lib/ or data/ folder and import as needed.
+// Generated from hospitalist-schedule.html
+
+const SCHEDULE_BASE = [{"d":"2026-06-29","p":"AK","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"ASh","s":"day","site":"Green"},{"d":"2026-06-29","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"CW","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"DL","s":"day","site":"Green"},{"d":"2026-06-29","p":"DM","s":"pm","site":"Memorial"},{"d":"2026-06-29","p":"DN","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"EF","s":"pm","site":"Memorial"},{"d":"2026-06-29","p":"JB","s":"day","site":"Green"},{"d":"2026-06-29","p":"JCH","s":"hs","site":"Memorial"},{"d":"2026-06-29","p":"KB","s":"day","site":"Green"},{"d":"2026-06-29","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-06-29","p":"LN","s":"day","site":"Green"},{"d":"2026-06-29","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"MM","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"NH","s":"jeop","site":"?"},{"d":"2026-06-29","p":"NK","s":"day","site":"Green"},{"d":"2026-06-29","p":"NP","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-06-29","p":"V S","s":"pm","site":"Green"},{"d":"2026-06-29","p":"VC","s":"day","site":"Green"},{"d":"2026-06-30","p":"AK","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"ASh","s":"day","site":"Green"},{"d":"2026-06-30","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"CW","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"DJ","s":"pm","site":"Memorial"},{"d":"2026-06-30","p":"DL","s":"day","site":"Green"},{"d":"2026-06-30","p":"DN","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"EF","s":"pm","site":"Memorial"},{"d":"2026-06-30","p":"JB","s":"day","site":"Green"},{"d":"2026-06-30","p":"KB","s":"day","site":"Green"},{"d":"2026-06-30","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-06-30","p":"LN","s":"day","site":"Green"},{"d":"2026-06-30","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"MM","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"NK","s":"day","site":"Green"},{"d":"2026-06-30","p":"NP","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-06-30","p":"RTi","s":"hs","site":"Green"},{"d":"2026-06-30","p":"RY","s":"jeop","site":"?"},{"d":"2026-06-30","p":"V S","s":"pm","site":"Green"},{"d":"2026-06-30","p":"VC","s":"day","site":"Green"},{"d":"2026-07-01","p":"AK","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-01","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-01","p":"DJ","s":"jeop","site":"?"},{"d":"2026-07-01","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"FS","s":"pm","site":"Memorial"},{"d":"2026-07-01","p":"JB","s":"day","site":"Green"},{"d":"2026-07-01","p":"JM","s":"day","site":"Green"},{"d":"2026-07-01","p":"KA","s":"pm","site":"Green"},{"d":"2026-07-01","p":"KB","s":"day","site":"Green"},{"d":"2026-07-01","p":"LN","s":"day","site":"Green"},{"d":"2026-07-01","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-07-01","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"NK","s":"day","site":"Green"},{"d":"2026-07-01","p":"NP","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-01","p":"RTi","s":"hs","site":"Green"},{"d":"2026-07-01","p":"VC","s":"day","site":"Green"},{"d":"2026-07-02","p":"AK","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-02","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"FS","s":"jeop","site":"?"},{"d":"2026-07-02","p":"GG","s":"hs","site":"Memorial"},{"d":"2026-07-02","p":"JB","s":"day","site":"Green"},{"d":"2026-07-02","p":"JH","s":"pm","site":"Memorial"},{"d":"2026-07-02","p":"JM","s":"day","site":"Green"},{"d":"2026-07-02","p":"JMi","s":"pm","site":"Green"},{"d":"2026-07-02","p":"KB","s":"day","site":"Green"},{"d":"2026-07-02","p":"LN","s":"day","site":"Green"},{"d":"2026-07-02","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-07-02","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"NK","s":"day","site":"Green"},{"d":"2026-07-02","p":"NP","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-02","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-07-02","p":"VC","s":"day","site":"Green"},{"d":"2026-07-03","p":"AK","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-03","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"DL","s":"pm","site":"Green"},{"d":"2026-07-03","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"JB","s":"day","site":"Green"},{"d":"2026-07-03","p":"JM","s":"day","site":"Green"},{"d":"2026-07-03","p":"KA","s":"jeop","site":"?"},{"d":"2026-07-03","p":"KB","s":"day","site":"Green"},{"d":"2026-07-03","p":"LD","s":"pm","site":"Memorial"},{"d":"2026-07-03","p":"LN","s":"day","site":"Green"},{"d":"2026-07-03","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-07-03","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-03","p":"NK","s":"day","site":"Green"},{"d":"2026-07-03","p":"NP","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-03","p":"RY","s":"pm","site":"Memorial"},{"d":"2026-07-03","p":"SKu","s":"day","site":"Green"},{"d":"2026-07-04","p":"AK","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-04","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"JB","s":"day","site":"Green"},{"d":"2026-07-04","p":"JCH","s":"pm","site":"Memorial"},{"d":"2026-07-04","p":"JM","s":"day","site":"Green"},{"d":"2026-07-04","p":"KB","s":"day","site":"Green"},{"d":"2026-07-04","p":"LN","s":"day","site":"Green"},{"d":"2026-07-04","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-07-04","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-04","p":"NK","s":"day","site":"Green"},{"d":"2026-07-04","p":"NP","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-04","p":"RTi","s":"jeop","site":"?"},{"d":"2026-07-04","p":"SJ","s":"pm","site":"Green"},{"d":"2026-07-04","p":"SKu","s":"day","site":"Green"},{"d":"2026-07-05","p":"AK","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-05","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"JB","s":"day","site":"Green"},{"d":"2026-07-05","p":"JH","s":"jeop","site":"?"},{"d":"2026-07-05","p":"JLe","s":"pm","site":"Memorial"},{"d":"2026-07-05","p":"JM","s":"day","site":"Green"},{"d":"2026-07-05","p":"KB","s":"day","site":"Green"},{"d":"2026-07-05","p":"LN","s":"day","site":"Green"},{"d":"2026-07-05","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-05","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-05","p":"NK","s":"day","site":"Green"},{"d":"2026-07-05","p":"NP","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-05","p":"SKu","s":"day","site":"Green"},{"d":"2026-07-05","p":"V S","s":"pm","site":"Green"},{"d":"2026-07-06","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-06","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-06","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"GG","s":"day","site":"Green"},{"d":"2026-07-06","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-06","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-06","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"LD","s":"day","site":"Green"},{"d":"2026-07-06","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-06","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-06","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-06","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-06","p":"NK","s":"jeop","site":"?"},{"d":"2026-07-06","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-06","p":"TM","s":"day","site":"Green"},{"d":"2026-07-06","p":"V S","s":"pm","site":"Green"},{"d":"2026-07-07","p":"ASh","s":"jeop","site":"?"},{"d":"2026-07-07","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"DN","s":"pm","site":"Memorial"},{"d":"2026-07-07","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"GG","s":"day","site":"Green"},{"d":"2026-07-07","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-07","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-07","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"LD","s":"day","site":"Green"},{"d":"2026-07-07","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-07","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-07","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-07","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-07","p":"OJa","s":"pm","site":"Memorial"},{"d":"2026-07-07","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-07","p":"TM","s":"day","site":"Green"},{"d":"2026-07-07","p":"V S","s":"pm","site":"Green"},{"d":"2026-07-08","p":"AK","s":"pm","site":"Memorial"},{"d":"2026-07-08","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-08","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"GG","s":"day","site":"Green"},{"d":"2026-07-08","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-08","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-08","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"LD","s":"day","site":"Green"},{"d":"2026-07-08","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-08","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-08","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-08","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-08","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-08","p":"SJ","s":"jeop","site":"?"},{"d":"2026-07-08","p":"TM","s":"day","site":"Green"},{"d":"2026-07-08","p":"V S","s":"pm","site":"Green"},{"d":"2026-07-09","p":"ASit","s":"pm","site":"Green"},{"d":"2026-07-09","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-09","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-09","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"GG","s":"day","site":"Green"},{"d":"2026-07-09","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-09","p":"JLe","s":"jeop","site":"?"},{"d":"2026-07-09","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-09","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"LD","s":"day","site":"Green"},{"d":"2026-07-09","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-09","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-09","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-09","p":"SKu","s":"hs","site":"Memorial"},{"d":"2026-07-09","p":"TM","s":"day","site":"Green"},{"d":"2026-07-09","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-10","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-10","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-10","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"GG","s":"day","site":"Green"},{"d":"2026-07-10","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-10","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-10","p":"JO","s":"hs","site":"Memorial"},{"d":"2026-07-10","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"LD","s":"day","site":"Green"},{"d":"2026-07-10","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-10","p":"LN","s":"jeop","site":"?"},{"d":"2026-07-10","p":"LWa","s":"pm","site":"Green"},{"d":"2026-07-10","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-10","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-10","p":"TM","s":"day","site":"Green"},{"d":"2026-07-10","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-11","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-11","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"GG","s":"day","site":"Green"},{"d":"2026-07-11","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-11","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-11","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-11","p":"JO","s":"hs","site":"Memorial"},{"d":"2026-07-11","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"LD","s":"day","site":"Green"},{"d":"2026-07-11","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-11","p":"LWa","s":"jeop","site":"?"},{"d":"2026-07-11","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-11","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-11","p":"TM","s":"day","site":"Green"},{"d":"2026-07-11","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-12","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"DL","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-12","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"GG","s":"day","site":"Green"},{"d":"2026-07-12","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-12","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-12","p":"JMi","s":"day","site":"Green"},{"d":"2026-07-12","p":"JO","s":"hs","site":"Memorial"},{"d":"2026-07-12","p":"KA","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"LD","s":"day","site":"Green"},{"d":"2026-07-12","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-12","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-12","p":"NH","s":"jeop","site":"?"},{"d":"2026-07-12","p":"NJ","s":"day","site":"Green"},{"d":"2026-07-12","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-12","p":"TM","s":"day","site":"Green"},{"d":"2026-07-13","p":"AK","s":"day","site":"Green"},{"d":"2026-07-13","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-13","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-13","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-13","p":"JB","s":"day","site":"Green"},{"d":"2026-07-13","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-07-13","p":"LN","s":"day","site":"Green"},{"d":"2026-07-13","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-13","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"MS","s":"day","site":"Green"},{"d":"2026-07-13","p":"NP","s":"pm","site":"Green"},{"d":"2026-07-13","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-07-13","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-13","p":"TM","s":"jeop","site":"?"},{"d":"2026-07-13","p":"XL","s":"day","site":"Green"},{"d":"2026-07-14","p":"AK","s":"day","site":"Green"},{"d":"2026-07-14","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-14","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"FS","s":"jeop","site":"?"},{"d":"2026-07-14","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-14","p":"JB","s":"day","site":"Green"},{"d":"2026-07-14","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-07-14","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-07-14","p":"LN","s":"day","site":"Green"},{"d":"2026-07-14","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-14","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"MS","s":"day","site":"Green"},{"d":"2026-07-14","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-14","p":"RTi","s":"pm","site":"Green"},{"d":"2026-07-14","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-07-14","p":"XL","s":"day","site":"Green"},{"d":"2026-07-15","p":"AK","s":"day","site":"Green"},{"d":"2026-07-15","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-15","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"DB","s":"pm","site":"Memorial"},{"d":"2026-07-15","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"DuD","s":"jeop","site":"?"},{"d":"2026-07-15","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-15","p":"JB","s":"day","site":"Green"},{"d":"2026-07-15","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-15","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-07-15","p":"LN","s":"day","site":"Green"},{"d":"2026-07-15","p":"MA","s":"hs","site":"Green"},{"d":"2026-07-15","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"MS","s":"day","site":"Green"},{"d":"2026-07-15","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-07-15","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-07-15","p":"XL","s":"day","site":"Green"},{"d":"2026-07-16","p":"AK","s":"day","site":"Green"},{"d":"2026-07-16","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-16","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"AlB","s":"pm","site":"Memorial"},{"d":"2026-07-16","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"DL","s":"pm","site":"Green"},{"d":"2026-07-16","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"GG","s":"pm","site":"Memorial"},{"d":"2026-07-16","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-16","p":"JB","s":"day","site":"Green"},{"d":"2026-07-16","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"LN","s":"day","site":"Green"},{"d":"2026-07-16","p":"MA","s":"jeop","site":"?"},{"d":"2026-07-16","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"MS","s":"day","site":"Green"},{"d":"2026-07-16","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-16","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-07-16","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-07-16","p":"XL","s":"day","site":"Green"},{"d":"2026-07-17","p":"AK","s":"day","site":"Green"},{"d":"2026-07-17","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-17","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"AlB","s":"jeop","site":"?"},{"d":"2026-07-17","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"DL","s":"pm","site":"Green"},{"d":"2026-07-17","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-17","p":"JB","s":"day","site":"Green"},{"d":"2026-07-17","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"JMi","s":"pm","site":"Memorial"},{"d":"2026-07-17","p":"LD","s":"pm","site":"Memorial"},{"d":"2026-07-17","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-07-17","p":"LN","s":"day","site":"Green"},{"d":"2026-07-17","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"MS","s":"day","site":"Green"},{"d":"2026-07-17","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-17","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-07-17","p":"XL","s":"day","site":"Green"},{"d":"2026-07-18","p":"AK","s":"day","site":"Green"},{"d":"2026-07-18","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-18","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"GG","s":"jeop","site":"?"},{"d":"2026-07-18","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-18","p":"JB","s":"day","site":"Green"},{"d":"2026-07-18","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-07-18","p":"LN","s":"day","site":"Green"},{"d":"2026-07-18","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"MS","s":"day","site":"Green"},{"d":"2026-07-18","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-18","p":"NJ","s":"pm","site":"Memorial"},{"d":"2026-07-18","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"RY","s":"pm","site":"Green"},{"d":"2026-07-18","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-07-18","p":"XL","s":"day","site":"Green"},{"d":"2026-07-19","p":"AK","s":"day","site":"Green"},{"d":"2026-07-19","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-19","p":"ASit","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"CW","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"DN","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"EF","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"Gh","s":"day","site":"Green"},{"d":"2026-07-19","p":"JB","s":"pm","site":"Green"},{"d":"2026-07-19","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"LD","s":"jeop","site":"?"},{"d":"2026-07-19","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-07-19","p":"LN","s":"day","site":"Green"},{"d":"2026-07-19","p":"MM","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"MS","s":"day","site":"Green"},{"d":"2026-07-19","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-19","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-07-19","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-07-19","p":"XL","s":"day","site":"Green"},{"d":"2026-07-20","p":"ASit","s":"jeop","site":"?"},{"d":"2026-07-20","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-20","p":"DL","s":"day","site":"Green"},{"d":"2026-07-20","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-20","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-20","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-20","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-07-20","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"LD","s":"day","site":"Green"},{"d":"2026-07-20","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-07-20","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-20","p":"NH","s":"hs","site":"Green"},{"d":"2026-07-20","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-20","p":"SJ","s":"pm","site":"Green"},{"d":"2026-07-20","p":"TM","s":"day","site":"Green"},{"d":"2026-07-21","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-21","p":"DL","s":"day","site":"Green"},{"d":"2026-07-21","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-21","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-21","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-21","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-21","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"KA","s":"pm","site":"Memorial"},{"d":"2026-07-21","p":"LD","s":"day","site":"Green"},{"d":"2026-07-21","p":"LF","s":"hs","site":"Green"},{"d":"2026-07-21","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-21","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-21","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-21","p":"TM","s":"day","site":"Green"},{"d":"2026-07-21","p":"XL","s":"jeop","site":"?"},{"d":"2026-07-22","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-22","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-22","p":"DL","s":"day","site":"Green"},{"d":"2026-07-22","p":"DM","s":"jeop","site":"?"},{"d":"2026-07-22","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-22","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-22","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-22","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-22","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"LD","s":"day","site":"Green"},{"d":"2026-07-22","p":"LF","s":"hs","site":"Green"},{"d":"2026-07-22","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-22","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-07-22","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-22","p":"TM","s":"day","site":"Green"},{"d":"2026-07-23","p":"AK","s":"jeop","site":"?"},{"d":"2026-07-23","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-23","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-23","p":"DL","s":"day","site":"Green"},{"d":"2026-07-23","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-23","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-23","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-23","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-23","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"KPat","s":"hs","site":"Green"},{"d":"2026-07-23","p":"LD","s":"day","site":"Green"},{"d":"2026-07-23","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-23","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-07-23","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-23","p":"TM","s":"day","site":"Green"},{"d":"2026-07-24","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-24","p":"DL","s":"day","site":"Green"},{"d":"2026-07-24","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-24","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"Gh","s":"pm","site":"Memorial"},{"d":"2026-07-24","p":"JB","s":"jeop","site":"?"},{"d":"2026-07-24","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-24","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-24","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-24","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"JO","s":"hs","site":"Memorial"},{"d":"2026-07-24","p":"KPat","s":"hs","site":"Green"},{"d":"2026-07-24","p":"LD","s":"day","site":"Green"},{"d":"2026-07-24","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-24","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-24","p":"TM","s":"day","site":"Green"},{"d":"2026-07-25","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-25","p":"DL","s":"day","site":"Green"},{"d":"2026-07-25","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-25","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-25","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-25","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-25","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"JO","s":"hs","site":"Memorial"},{"d":"2026-07-25","p":"KPat","s":"hs","site":"Green"},{"d":"2026-07-25","p":"LD","s":"day","site":"Green"},{"d":"2026-07-25","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-25","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-25","p":"SKu","s":"jeop","site":"?"},{"d":"2026-07-25","p":"TM","s":"day","site":"Green"},{"d":"2026-07-26","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"DJ","s":"day","site":"Green"},{"d":"2026-07-26","p":"DL","s":"day","site":"Green"},{"d":"2026-07-26","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"EF","s":"jeop","site":"?"},{"d":"2026-07-26","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-07-26","p":"FS","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"GG","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"JCH","s":"day","site":"Green"},{"d":"2026-07-26","p":"JLe","s":"day","site":"Green"},{"d":"2026-07-26","p":"JM","s":"pm","site":"Green"},{"d":"2026-07-26","p":"JMi","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"LD","s":"day","site":"Green"},{"d":"2026-07-26","p":"LJQ","s":"day","site":"Green"},{"d":"2026-07-26","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"NS","s":"hs","site":"Green"},{"d":"2026-07-26","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"RY","s":"day","site":"Memorial"},{"d":"2026-07-26","p":"TM","s":"day","site":"Green"},{"d":"2026-07-26","p":"V S","s":"hs","site":"Memorial"},{"d":"2026-07-27","p":"AK","s":"day","site":"Green"},{"d":"2026-07-27","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-27","p":"ASit","s":"day","site":"Green"},{"d":"2026-07-27","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-27","p":"DM","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"DN","s":"pm","site":"Green"},{"d":"2026-07-27","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"JB","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"KA","s":"day","site":"Green"},{"d":"2026-07-27","p":"KB","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"LJQ","s":"jeop","site":"?"},{"d":"2026-07-27","p":"LN","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"LWa","s":"day","site":"Green"},{"d":"2026-07-27","p":"MS","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"NK","s":"day","site":"Memorial"},{"d":"2026-07-27","p":"NS","s":"jeop","site":"?"},{"d":"2026-07-27","p":"OJa","s":"day","site":"Green"},{"d":"2026-07-27","p":"SJ","s":"hs","site":"Memorial"},{"d":"2026-07-27","p":"SKu","s":"pm","site":"Memorial"},{"d":"2026-07-27","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-27","p":"XL","s":"day","site":"Green"},{"d":"2026-07-28","p":"AK","s":"day","site":"Green"},{"d":"2026-07-28","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-28","p":"ASit","s":"day","site":"Green"},{"d":"2026-07-28","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-28","p":"DM","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"DN","s":"pm","site":"Green"},{"d":"2026-07-28","p":"EW","s":"jeop","site":"?"},{"d":"2026-07-28","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"JB","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"JMi","s":"hs","site":"Memorial"},{"d":"2026-07-28","p":"KA","s":"day","site":"Green"},{"d":"2026-07-28","p":"KB","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"LN","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"LWa","s":"day","site":"Green"},{"d":"2026-07-28","p":"MS","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"NK","s":"day","site":"Memorial"},{"d":"2026-07-28","p":"OJa","s":"day","site":"Green"},{"d":"2026-07-28","p":"SKu","s":"pm","site":"Memorial"},{"d":"2026-07-28","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-28","p":"XL","s":"day","site":"Green"},{"d":"2026-07-29","p":"AK","s":"day","site":"Green"},{"d":"2026-07-29","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-29","p":"ASit","s":"day","site":"Green"},{"d":"2026-07-29","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-29","p":"DL","s":"jeop","site":"?"},{"d":"2026-07-29","p":"DM","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"DN","s":"pm","site":"Green"},{"d":"2026-07-29","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"JB","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"KA","s":"day","site":"Green"},{"d":"2026-07-29","p":"KB","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"LN","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"LWa","s":"day","site":"Green"},{"d":"2026-07-29","p":"MS","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"NK","s":"day","site":"Memorial"},{"d":"2026-07-29","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-07-29","p":"OJa","s":"day","site":"Green"},{"d":"2026-07-29","p":"SKu","s":"pm","site":"Memorial"},{"d":"2026-07-29","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-29","p":"XL","s":"day","site":"Green"},{"d":"2026-07-30","p":"AK","s":"day","site":"Green"},{"d":"2026-07-30","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-30","p":"ASit","s":"day","site":"Green"},{"d":"2026-07-30","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-30","p":"DM","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"DN","s":"pm","site":"Memorial"},{"d":"2026-07-30","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"JB","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"JMi","s":"jeop","site":"?"},{"d":"2026-07-30","p":"KA","s":"day","site":"Green"},{"d":"2026-07-30","p":"KB","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-07-30","p":"LN","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"LWa","s":"day","site":"Green"},{"d":"2026-07-30","p":"MS","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"NK","s":"day","site":"Memorial"},{"d":"2026-07-30","p":"OJa","s":"day","site":"Green"},{"d":"2026-07-30","p":"SKu","s":"pm","site":"Green"},{"d":"2026-07-30","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-30","p":"XL","s":"day","site":"Green"},{"d":"2026-07-31","p":"AK","s":"day","site":"Green"},{"d":"2026-07-31","p":"ASh","s":"day","site":"Green"},{"d":"2026-07-31","p":"ASit","s":"day","site":"Green"},{"d":"2026-07-31","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-07-31","p":"DM","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"DN","s":"pm","site":"Memorial"},{"d":"2026-07-31","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"JB","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"JH","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"KA","s":"day","site":"Green"},{"d":"2026-07-31","p":"KB","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"LN","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"LWa","s":"day","site":"Green"},{"d":"2026-07-31","p":"MS","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-07-31","p":"NK","s":"day","site":"Memorial"},{"d":"2026-07-31","p":"OJa","s":"day","site":"Green"},{"d":"2026-07-31","p":"RTi","s":"jeop","site":"?"},{"d":"2026-07-31","p":"SKu","s":"pm","site":"Green"},{"d":"2026-07-31","p":"V S","s":"hs","site":"Green"},{"d":"2026-07-31","p":"XL","s":"day","site":"Green"},{"d":"2026-08-01","p":"AK","s":"day","site":"Green"},{"d":"2026-08-01","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-01","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-01","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-08-01","p":"DM","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"JH","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"KA","s":"day","site":"Green"},{"d":"2026-08-01","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"LD","s":"jeop","site":"?"},{"d":"2026-08-01","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"LWa","s":"day","site":"Green"},{"d":"2026-08-01","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-01","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-01","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-01","p":"OJa","s":"day","site":"Green"},{"d":"2026-08-01","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-01","p":"XL","s":"day","site":"Green"},{"d":"2026-08-02","p":"AK","s":"day","site":"Green"},{"d":"2026-08-02","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-02","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-02","p":"CW","s":"pm","site":"Green"},{"d":"2026-08-02","p":"DM","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-02","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"JH","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"KA","s":"day","site":"Green"},{"d":"2026-08-02","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"LWa","s":"day","site":"Green"},{"d":"2026-08-02","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-02","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-02","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-02","p":"OJa","s":"day","site":"Green"},{"d":"2026-08-02","p":"V S","s":"jeop","site":"?"},{"d":"2026-08-02","p":"XL","s":"day","site":"Green"},{"d":"2026-08-03","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"DL","s":"day","site":"Green"},{"d":"2026-08-03","p":"DN","s":"pm","site":"Memorial"},{"d":"2026-08-03","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"EF","s":"day","site":"Green"},{"d":"2026-08-03","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-03","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"GG","s":"day","site":"Green"},{"d":"2026-08-03","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"JH","s":"jeop","site":"?"},{"d":"2026-08-03","p":"JM","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-03","p":"LD","s":"day","site":"Green"},{"d":"2026-08-03","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-03","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-03","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-03","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-03","p":"SJ","s":"pm","site":"Green"},{"d":"2026-08-03","p":"TM","s":"day","site":"Green"},{"d":"2026-08-04","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"DL","s":"day","site":"Green"},{"d":"2026-08-04","p":"DN","s":"pm","site":"Memorial"},{"d":"2026-08-04","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"EF","s":"day","site":"Green"},{"d":"2026-08-04","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-04","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"GG","s":"day","site":"Green"},{"d":"2026-08-04","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"JM","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-04","p":"LD","s":"day","site":"Green"},{"d":"2026-08-04","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-08-04","p":"NH","s":"hs","site":"Green"},{"d":"2026-08-04","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"OJa","s":"jeop","site":"?"},{"d":"2026-08-04","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-04","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-04","p":"SJ","s":"pm","site":"Green"},{"d":"2026-08-04","p":"TM","s":"day","site":"Green"},{"d":"2026-08-05","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"DL","s":"day","site":"Green"},{"d":"2026-08-05","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"EF","s":"day","site":"Green"},{"d":"2026-08-05","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-05","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"GG","s":"day","site":"Green"},{"d":"2026-08-05","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"JM","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-05","p":"LD","s":"day","site":"Green"},{"d":"2026-08-05","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-08-05","p":"NH","s":"hs","site":"Green"},{"d":"2026-08-05","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"NK","s":"pm","site":"Memorial"},{"d":"2026-08-05","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-05","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-05","p":"SKu","s":"jeop","site":"?"},{"d":"2026-08-05","p":"TM","s":"day","site":"Green"},{"d":"2026-08-05","p":"XL","s":"pm","site":"Green"},{"d":"2026-08-06","p":"ASit","s":"pm","site":"Green"},{"d":"2026-08-06","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"DL","s":"day","site":"Green"},{"d":"2026-08-06","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"EF","s":"day","site":"Green"},{"d":"2026-08-06","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-06","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"GG","s":"day","site":"Green"},{"d":"2026-08-06","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"JM","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-06","p":"KA","s":"pm","site":"Memorial"},{"d":"2026-08-06","p":"LD","s":"day","site":"Green"},{"d":"2026-08-06","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-08-06","p":"MM","s":"jeop","site":"?"},{"d":"2026-08-06","p":"MS","s":"hs","site":"Green"},{"d":"2026-08-06","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-06","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-06","p":"TM","s":"day","site":"Green"},{"d":"2026-08-07","p":"ASit","s":"pm","site":"Green"},{"d":"2026-08-07","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"CW","s":"jeop","site":"?"},{"d":"2026-08-07","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"DL","s":"day","site":"Green"},{"d":"2026-08-07","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"EF","s":"day","site":"Green"},{"d":"2026-08-07","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-07","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"GG","s":"day","site":"Green"},{"d":"2026-08-07","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-07","p":"LD","s":"day","site":"Green"},{"d":"2026-08-07","p":"LWa","s":"pm","site":"Memorial"},{"d":"2026-08-07","p":"MS","s":"hs","site":"Memorial"},{"d":"2026-08-07","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-07","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-07","p":"SKu","s":"hs","site":"Green"},{"d":"2026-08-07","p":"TM","s":"day","site":"Green"},{"d":"2026-08-08","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"DL","s":"day","site":"Green"},{"d":"2026-08-08","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"EF","s":"day","site":"Green"},{"d":"2026-08-08","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-08","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"GG","s":"day","site":"Green"},{"d":"2026-08-08","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-08","p":"LD","s":"day","site":"Green"},{"d":"2026-08-08","p":"MS","s":"hs","site":"Memorial"},{"d":"2026-08-08","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-08","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-08","p":"SJ","s":"pm","site":"Green"},{"d":"2026-08-08","p":"SKu","s":"hs","site":"Green"},{"d":"2026-08-08","p":"TM","s":"day","site":"Green"},{"d":"2026-08-08","p":"XL","s":"jeop","site":"?"},{"d":"2026-08-09","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"DJ","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"DL","s":"day","site":"Green"},{"d":"2026-08-09","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"EF","s":"day","site":"Green"},{"d":"2026-08-09","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-09","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"GG","s":"day","site":"Green"},{"d":"2026-08-09","p":"JCH","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"JH","s":"pm","site":"Green"},{"d":"2026-08-09","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-09","p":"LD","s":"day","site":"Green"},{"d":"2026-08-09","p":"MS","s":"hs","site":"Memorial"},{"d":"2026-08-09","p":"NH","s":"jeop","site":"?"},{"d":"2026-08-09","p":"NJ","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"RTi","s":"day","site":"Green"},{"d":"2026-08-09","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-09","p":"SKu","s":"hs","site":"Green"},{"d":"2026-08-09","p":"TM","s":"day","site":"Green"},{"d":"2026-08-10","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-10","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"DN","s":"day","site":"Green"},{"d":"2026-08-10","p":"GG","s":"pm","site":"Memorial"},{"d":"2026-08-10","p":"Gh","s":"pm","site":"Green"},{"d":"2026-08-10","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"KA","s":"day","site":"Green"},{"d":"2026-08-10","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"LD","s":"pm","site":"Memorial"},{"d":"2026-08-10","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-10","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-10","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"MM","s":"day","site":"Green"},{"d":"2026-08-10","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"NS","s":"hs","site":"Green"},{"d":"2026-08-10","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-10","p":"RY","s":"jeop","site":"?"},{"d":"2026-08-10","p":"SK","s":"day","site":"Green"},{"d":"2026-08-10","p":"VC","s":"day","site":"Green"},{"d":"2026-08-10","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-11","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"DJ","s":"jeop","site":"?"},{"d":"2026-08-11","p":"DL","s":"pm","site":"Memorial"},{"d":"2026-08-11","p":"DN","s":"day","site":"Green"},{"d":"2026-08-11","p":"Gh","s":"pm","site":"Green"},{"d":"2026-08-11","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"KA","s":"day","site":"Green"},{"d":"2026-08-11","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"KPat","s":"hs","site":"Green"},{"d":"2026-08-11","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-11","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-11","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"MM","s":"day","site":"Green"},{"d":"2026-08-11","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-11","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-08-11","p":"SK","s":"day","site":"Green"},{"d":"2026-08-11","p":"VC","s":"day","site":"Green"},{"d":"2026-08-11","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-12","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"DN","s":"day","site":"Green"},{"d":"2026-08-12","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"JCH","s":"jeop","site":"?"},{"d":"2026-08-12","p":"KA","s":"day","site":"Green"},{"d":"2026-08-12","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"KPat","s":"hs","site":"Green"},{"d":"2026-08-12","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-12","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-12","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"MM","s":"day","site":"Green"},{"d":"2026-08-12","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-12","p":"RTi","s":"pm","site":"Green"},{"d":"2026-08-12","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-08-12","p":"SK","s":"day","site":"Green"},{"d":"2026-08-12","p":"TM","s":"pm","site":"Memorial"},{"d":"2026-08-12","p":"VC","s":"day","site":"Green"},{"d":"2026-08-12","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-13","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"DN","s":"day","site":"Green"},{"d":"2026-08-13","p":"DuD","s":"pm","site":"Memorial"},{"d":"2026-08-13","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"JCH","s":"pm","site":"Green"},{"d":"2026-08-13","p":"JH","s":"jeop","site":"?"},{"d":"2026-08-13","p":"KA","s":"day","site":"Green"},{"d":"2026-08-13","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"LF","s":"hs","site":"Green"},{"d":"2026-08-13","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-13","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"MM","s":"day","site":"Green"},{"d":"2026-08-13","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-13","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-13","p":"SK","s":"day","site":"Green"},{"d":"2026-08-13","p":"TM","s":"pm","site":"Memorial"},{"d":"2026-08-13","p":"VC","s":"day","site":"Green"},{"d":"2026-08-13","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-14","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"DN","s":"day","site":"Green"},{"d":"2026-08-14","p":"DuD","s":"jeop","site":"?"},{"d":"2026-08-14","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"GG","s":"pm","site":"Memorial"},{"d":"2026-08-14","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"JCH","s":"pm","site":"Green"},{"d":"2026-08-14","p":"JMi","s":"pm","site":"Memorial"},{"d":"2026-08-14","p":"KA","s":"day","site":"Green"},{"d":"2026-08-14","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"LF","s":"hs","site":"Green"},{"d":"2026-08-14","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-14","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"MM","s":"day","site":"Green"},{"d":"2026-08-14","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-14","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-14","p":"SK","s":"day","site":"Green"},{"d":"2026-08-14","p":"VC","s":"day","site":"Green"},{"d":"2026-08-14","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-15","p":"AlB","s":"jeop","site":"?"},{"d":"2026-08-15","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"DN","s":"day","site":"Green"},{"d":"2026-08-15","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"JMi","s":"pm","site":"Memorial"},{"d":"2026-08-15","p":"KA","s":"day","site":"Green"},{"d":"2026-08-15","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"LD","s":"pm","site":"Green"},{"d":"2026-08-15","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-15","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"MM","s":"day","site":"Green"},{"d":"2026-08-15","p":"NH","s":"hs","site":"Memorial"},{"d":"2026-08-15","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-15","p":"NS","s":"hs","site":"Green"},{"d":"2026-08-15","p":"SK","s":"day","site":"Green"},{"d":"2026-08-15","p":"VC","s":"day","site":"Green"},{"d":"2026-08-15","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"ASh","s":"pm","site":"Green"},{"d":"2026-08-16","p":"ASit","s":"day","site":"Green"},{"d":"2026-08-16","p":"CW","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"DN","s":"day","site":"Green"},{"d":"2026-08-16","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"GG","s":"jeop","site":"?"},{"d":"2026-08-16","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"JMi","s":"pm","site":"Memorial"},{"d":"2026-08-16","p":"KA","s":"day","site":"Green"},{"d":"2026-08-16","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"LJQ","s":"day","site":"Green"},{"d":"2026-08-16","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"MM","s":"day","site":"Green"},{"d":"2026-08-16","p":"NH","s":"hs","site":"Green"},{"d":"2026-08-16","p":"NK","s":"day","site":"Memorial"},{"d":"2026-08-16","p":"NS","s":"hs","site":"Memorial"},{"d":"2026-08-16","p":"SK","s":"day","site":"Green"},{"d":"2026-08-16","p":"VC","s":"day","site":"Green"},{"d":"2026-08-16","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-17","p":"DM","s":"day","site":"Green"},{"d":"2026-08-17","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-17","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-17","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-17","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-08-17","p":"KB","s":"jeop","site":"?"},{"d":"2026-08-17","p":"KPat","s":"jeop","site":"?"},{"d":"2026-08-17","p":"LD","s":"day","site":"Green"},{"d":"2026-08-17","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-08-17","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"NH","s":"hs","site":"Green"},{"d":"2026-08-17","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-17","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-17","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-17","p":"TM","s":"day","site":"Green"},{"d":"2026-08-18","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-18","p":"DM","s":"day","site":"Green"},{"d":"2026-08-18","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-18","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"JB","s":"jeop","site":"?"},{"d":"2026-08-18","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-18","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-18","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-08-18","p":"LD","s":"day","site":"Green"},{"d":"2026-08-18","p":"MA","s":"hs","site":"Memorial"},{"d":"2026-08-18","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"NH","s":"hs","site":"Green"},{"d":"2026-08-18","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-18","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-18","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-18","p":"TM","s":"day","site":"Green"},{"d":"2026-08-19","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-19","p":"DM","s":"day","site":"Green"},{"d":"2026-08-19","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-19","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"GG","s":"pm","site":"Green"},{"d":"2026-08-19","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-19","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-19","p":"JM","s":"pm","site":"Memorial"},{"d":"2026-08-19","p":"LD","s":"day","site":"Green"},{"d":"2026-08-19","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-19","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-19","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-19","p":"SKu","s":"hs","site":"Memorial"},{"d":"2026-08-19","p":"TM","s":"day","site":"Green"},{"d":"2026-08-19","p":"VC","s":"jeop","site":"?"},{"d":"2026-08-20","p":"ASh","s":"jeop","site":"?"},{"d":"2026-08-20","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-20","p":"DM","s":"day","site":"Green"},{"d":"2026-08-20","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-20","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-20","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-20","p":"JM","s":"pm","site":"Green"},{"d":"2026-08-20","p":"LD","s":"day","site":"Green"},{"d":"2026-08-20","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-20","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-20","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-20","p":"SKu","s":"hs","site":"Memorial"},{"d":"2026-08-20","p":"TM","s":"day","site":"Green"},{"d":"2026-08-20","p":"VC","s":"pm","site":"Memorial"},{"d":"2026-08-21","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"CW","s":"pm","site":"Memorial"},{"d":"2026-08-21","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-21","p":"DM","s":"day","site":"Green"},{"d":"2026-08-21","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-21","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-21","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-21","p":"JM","s":"pm","site":"Green"},{"d":"2026-08-21","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-08-21","p":"LD","s":"day","site":"Green"},{"d":"2026-08-21","p":"LN","s":"jeop","site":"?"},{"d":"2026-08-21","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-21","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-21","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-21","p":"TM","s":"day","site":"Green"},{"d":"2026-08-22","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-22","p":"DM","s":"day","site":"Green"},{"d":"2026-08-22","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-22","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-22","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-22","p":"JM","s":"pm","site":"Green"},{"d":"2026-08-22","p":"KPat","s":"hs","site":"Memorial"},{"d":"2026-08-22","p":"LD","s":"day","site":"Green"},{"d":"2026-08-22","p":"MA","s":"hs","site":"Green"},{"d":"2026-08-22","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-22","p":"OJa","s":"jeop","site":"?"},{"d":"2026-08-22","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-22","p":"TM","s":"day","site":"Green"},{"d":"2026-08-23","p":"ASit","s":"jeop","site":"?"},{"d":"2026-08-23","p":"AlB","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"DJ","s":"day","site":"Green"},{"d":"2026-08-23","p":"DM","s":"day","site":"Green"},{"d":"2026-08-23","p":"DuD","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"EF","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"EW","s":"pm","site":"Memorial"},{"d":"2026-08-23","p":"FS","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"Gh","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"JCH","s":"day","site":"Green"},{"d":"2026-08-23","p":"JLe","s":"day","site":"Green"},{"d":"2026-08-23","p":"JM","s":"pm","site":"Green"},{"d":"2026-08-23","p":"KPat","s":"hs","site":"Green"},{"d":"2026-08-23","p":"LD","s":"day","site":"Green"},{"d":"2026-08-23","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-23","p":"MS","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"NJ","s":"day","site":"Green"},{"d":"2026-08-23","p":"RTi","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"RY","s":"day","site":"Memorial"},{"d":"2026-08-23","p":"TM","s":"day","site":"Green"},{"d":"2026-08-24","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-24","p":"ASit","s":"pm","site":"Memorial"},{"d":"2026-08-24","p":"CW","s":"day","site":"Green"},{"d":"2026-08-24","p":"DJ","s":"pm","site":"Green"},{"d":"2026-08-24","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"FS","s":"jeop","site":"?"},{"d":"2026-08-24","p":"GG","s":"day","site":"Green"},{"d":"2026-08-24","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-24","p":"KA","s":"day","site":"Green"},{"d":"2026-08-24","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-24","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"NS","s":"hs","site":"Green"},{"d":"2026-08-24","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-24","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-08-24","p":"SK","s":"day","site":"Green"},{"d":"2026-08-24","p":"VC","s":"day","site":"Green"},{"d":"2026-08-24","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-25","p":"ASit","s":"pm","site":"Memorial"},{"d":"2026-08-25","p":"AlB","s":"pm","site":"Memorial"},{"d":"2026-08-25","p":"CW","s":"day","site":"Green"},{"d":"2026-08-25","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"GG","s":"day","site":"Green"},{"d":"2026-08-25","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"JM","s":"jeop","site":"?"},{"d":"2026-08-25","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-25","p":"KA","s":"day","site":"Green"},{"d":"2026-08-25","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-25","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-25","p":"SK","s":"day","site":"Green"},{"d":"2026-08-25","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-25","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-25","p":"VC","s":"day","site":"Green"},{"d":"2026-08-25","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-26","p":"ASit","s":"pm","site":"Memorial"},{"d":"2026-08-26","p":"CW","s":"day","site":"Green"},{"d":"2026-08-26","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"EF","s":"pm","site":"Memorial"},{"d":"2026-08-26","p":"GG","s":"day","site":"Green"},{"d":"2026-08-26","p":"Gh","s":"jeop","site":"?"},{"d":"2026-08-26","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-26","p":"KA","s":"day","site":"Green"},{"d":"2026-08-26","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-26","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-26","p":"SK","s":"day","site":"Green"},{"d":"2026-08-26","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-26","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-26","p":"VC","s":"day","site":"Green"},{"d":"2026-08-26","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-27","p":"CW","s":"day","site":"Green"},{"d":"2026-08-27","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"GG","s":"day","site":"Green"},{"d":"2026-08-27","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"JH","s":"pm","site":"Memorial"},{"d":"2026-08-27","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-27","p":"KA","s":"day","site":"Green"},{"d":"2026-08-27","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-27","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-27","p":"SJ","s":"pm","site":"Memorial"},{"d":"2026-08-27","p":"SK","s":"day","site":"Green"},{"d":"2026-08-27","p":"SKu","s":"pm","site":"Green"},{"d":"2026-08-27","p":"TM","s":"jeop","site":"?"},{"d":"2026-08-27","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-27","p":"VC","s":"day","site":"Green"},{"d":"2026-08-27","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-28","p":"CW","s":"day","site":"Green"},{"d":"2026-08-28","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"GG","s":"day","site":"Green"},{"d":"2026-08-28","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-28","p":"KA","s":"day","site":"Green"},{"d":"2026-08-28","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"LD","s":"pm","site":"Memorial"},{"d":"2026-08-28","p":"LF","s":"hs","site":"Memorial"},{"d":"2026-08-28","p":"LJQ","s":"jeop","site":"?"},{"d":"2026-08-28","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"NS","s":"jeop","site":"?"},{"d":"2026-08-28","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-28","p":"RTi","s":"pm","site":"Memorial"},{"d":"2026-08-28","p":"RY","s":"pm","site":"Green"},{"d":"2026-08-28","p":"SK","s":"day","site":"Green"},{"d":"2026-08-28","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-28","p":"VC","s":"day","site":"Green"},{"d":"2026-08-28","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"AK","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-29","p":"CW","s":"day","site":"Green"},{"d":"2026-08-29","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"GG","s":"day","site":"Green"},{"d":"2026-08-29","p":"Gh","s":"pm","site":"Green"},{"d":"2026-08-29","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"JLe","s":"jeop","site":"?"},{"d":"2026-08-29","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-29","p":"KA","s":"day","site":"Green"},{"d":"2026-08-29","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"MS","s":"hs","site":"Memorial"},{"d":"2026-08-29","p":"NJ","s":"pm","site":"Memorial"},{"d":"2026-08-29","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-29","p":"SK","s":"day","site":"Green"},{"d":"2026-08-29","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-29","p":"VC","s":"day","site":"Green"},{"d":"2026-08-29","p":"XL","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"AK","s":"pm","site":"Memorial"},{"d":"2026-08-30","p":"ASh","s":"day","site":"Green"},{"d":"2026-08-30","p":"CW","s":"day","site":"Green"},{"d":"2026-08-30","p":"DN","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"EW","s":"jeop","site":"?"},{"d":"2026-08-30","p":"GG","s":"day","site":"Green"},{"d":"2026-08-30","p":"JB","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"JMi","s":"day","site":"Green"},{"d":"2026-08-30","p":"KA","s":"day","site":"Green"},{"d":"2026-08-30","p":"KB","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"LN","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"LWa","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"MS","s":"hs","site":"Memorial"},{"d":"2026-08-30","p":"OJa","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"RY","s":"pm","site":"Green"},{"d":"2026-08-30","p":"SK","s":"day","site":"Green"},{"d":"2026-08-30","p":"SKu","s":"day","site":"Memorial"},{"d":"2026-08-30","p":"V S","s":"hs","site":"Green"},{"d":"2026-08-30","p":"VC","s":"day","site":"Green"},{"d":"2026-08-30","p":"XL","s":"day","site":"Memorial"}];
+
+
+const PROVIDER_NAMES = {
+  'AK':   {name:'Alexander Ko',         pager:'858-271-2924'},
+  'ASh':  {name:'Ashley Shah',          pager:'618-698-6045'},
+  'ASit': {name:'Alan Sit',             pager:'858-494-9689'},
+  'AlB':  {name:'Alan Beneze',          pager:'858-271-2557'},
+  'CW':   {name:'Christopher Walsh',    pager:'410-428-7710'},
+  'DB':   {name:'Danielle Brazel',      pager:'551-206-6691'},
+  'DJ':   {name:'Derek Jones',          pager:'858-699-6974'},
+  'DL':   {name:'Darius Leung',          pager:'858-361-8328'},
+  'DM':   {name:'Diane McNally',         pager:'858-271-2487'},
+  'DN':   {name:'Dominic Nguyen',       pager:'562-673-7012'},
+  'DuD':  {name:'Duc Do',               pager:'858-271-2745'},
+  'EF':   {name:'Elizabeth Farrell',    pager:'858-494-1792'},
+  'EW':   {name:'Enoch Wang',           pager:'858-271-2078'},
+  'FS':   {name:'Farhad Shadan',        pager:'858-752-2913'},
+  'GG':   {name:'Gauri Gadre',          pager:'858-271-2745'},
+  'Gh':   {name:'Gabrielle Horner',     pager:''},
+  'JB':   {name:'Josef Bauer',          pager:'858-271-3931'},
+  'JCH':  {name:'Joshua Cheng',         pager:'858-494-9381'},
+  'JH':   {name:'James Hart',           pager:'858-271-2312'},
+  'JLe':  {name:'Jacklyn Lee',          pager:'858-494-1767'},
+  'JM':   {name:'Jordan Martinez',      pager:'858-494-2450'},
+  'JMi':  {name:'Jean Min',             pager:'818-744-6881'},
+  'JO':   {name:"John O'Fee",           pager:'310-625-3358'},
+  'KA':   {name:'Karima Ali',           pager:'817-929-7864'},
+  'KB':   {name:'Khamisah Barger',      pager:'858-271-2023'},
+  'KPat': {name:'Karna Patel',          pager:'858-740-1299'},
+  'LD':   {name:'Linda Ding',           pager:'858-205-2664'},
+  'LF':   {name:'Liam Flanagan',        pager:''},
+  'LJQ':  {name:'LJQ–SK',              pager:''},
+  'LN':   {name:'Laura Nicholson',      pager:'858-205-9456'},
+  'LWa':  {name:'Christopher Walsh',     pager:'410-428-7710'},
+  'MA':   {name:'Mayank Amin',          pager:'510-329-1386'},
+  'MM':   {name:'Michaela Miller',      pager:'858-494-3044'},
+  'MS':   {name:'Matt Stagg',           pager:''},
+  'NH':   {name:'Nima Hajazimzanjani',  pager:'832-368-4340'},
+  'NJ':   {name:'Neal Jones',           pager:'214-840-9862'},
+  'NK':   {name:'Neil Kalra',           pager:'858-271-2422'},
+  'NP':   {name:'Nihal Patel',          pager:'503-317-3392'},
+  'NS':   {name:'Natasha Surette',      pager:'858-493-0935'},
+  'OJa':  {name:'Ola Jandali',          pager:'858-494-7862'},
+  'RTi':  {name:'Robert Tickes',        pager:'928-246-5873'},
+  'RY':   {name:'Roger Yu',             pager:'858-494-1893'},
+  'SJ':   {name:'Stuti Jaiswal',        pager:'858-271-2290'},
+  'SK':   {name:'Shari Krevitz',        pager:'858-494-1243'},
+  'SKu':  {name:'Samuel Kung',          pager:'650-804-5432'},
+  'TM':   {name:'Thomas McCarthy',      pager:'858-271-3139'},
+  'V S':  {name:'Victor Stewart',       pager:'858-494-5115'},
+  'VC':   {name:'Virginia Chan',        pager:'858-271-2857'},
+  'XL':   {name:'Xiaoli Liu',           pager:'858-271-3961'},
+};
+
+const FTE_DEFAULTS = {
+  'VC':1,'TM':1,'AK':1,'DJ':1,'JB':1,'FS':1,'KB':1,'ASit':1,'DN':1,'NJ':1,
+  'JCH':1,'JM':1,'CW':1,'DL':1,'LWa':1,'ASh':1,'JMi':1,'SKu':1,'OJa':1,
+  'NK':1,'RY':1,'AlB':1,'EW':1,'DuD':1,'RTi':1,'XL':0.8,'LD':1,'KA':0.9,
+  'DM':0.8,'GG':1,'JLe':0.8,'LN':0.5,'JH':0.7,'EF':0.5,'LJQ':1,'MM':0.5,
+  'SJ':0.5,'SK':1,'V S':1,'MA':1,'KPat':0.8,'NS':0.5,'NH':1
+};
+
+const FTE_HS_DEFAULTS = {
+  'CW':0.2,'DL':0.1,'JMi':0.1,'SKu':0.25,'OJa':0.2,'RTi':0.1,
+  'SJ':0.05,'V S':0.8,'MA':1,'KPat':0.8,'NS':0.5,'NH':1
+};
+
+const SHIFT_NOTES = {
+  'JM':'Primarily PMs',
+  'EW':'PMs only',
+  'LN':'Days only',
+  'LJQ':'Days only',
+  'SJ':'Otherwise PMs only',
+  'V S':'HS or PMs only — no days'
+};
+
+const SITE_RESTRICTIONS = { 'EW': 'Memorial' };
+
+// Derived helpers
+const PROVIDERS = [...new Set(SCHEDULE_BASE.map(s => s.p))].sort();
+const SHIFT_LABELS = { day:'Day', pm:'PM', hs:'HS', jeop:'Jeop' };
+const SHIFT_TIMES  = { day:'7a–7p', pm:'2p–10p', hs:'Overnight (HS)', jeop:'Jeopardy' };
+
+function providerName(p) { return (PROVIDER_NAMES[p] || {}).name || p; }
+function providerPager(p) { return (PROVIDER_NAMES[p] || {}).pager || ''; }
+
+
+// ===== SCHEDULE ALGORITHM (uploaded) =====
+// scheduleAlgorithm.js
+// Scripps Hospitalist Group — Greedy Schedule Generator
+// Import and call runAlgorithm() to produce a draft schedule.
+//
+// Usage:
+//   import { runAlgorithm } from './scheduleAlgorithm';
+//   import { PROVIDERS, FTE_DEFAULTS, FTE_HS_DEFAULTS, SHIFT_NOTES, SITE_RESTRICTIONS } from './scheduleConstants';
+//
+//   const { shifts, violations } = runAlgorithm({
+//     startDate: '2027-01-01',
+//     endDate:   '2027-06-30',
+//     providers: PROVIDERS,
+//     fteDefaults: FTE_DEFAULTS,
+//     fteHsDefaults: FTE_HS_DEFAULTS,
+//     shiftNotes: SHIFT_NOTES,
+//     siteRestrictions: SITE_RESTRICTIONS,
+//     adminOverrides: {},   // from hospitalist_admin_overrides localStorage key
+//     siteCfg: {            // from hospitalist_site_settings localStorage key
+//       Green:    { minDay:5, maxDay:6, wkndMinDay:5, wkndMaxDay:6, pmSlots:2, hsSlots:1 },
+//       Memorial: { minDay:5, maxDay:7, wkndMinDay:5, wkndMaxDay:7, pmSlots:1, hsSlots:1 },
+//     },
+//     allPrefs: {},         // from hospitalist_prefs localStorage key (vacation blackouts)
+//   });
+//
+// Output:
+//   shifts     — array of { d: 'YYYY-MM-DD', p: 'INITIALS', s: 'day'|'pm'|'hs'|'jeop', site: 'Green'|'Memorial'|'?' }
+//   violations — array of human-readable strings describing constraint violations
+
+/**
+ * @typedef {{ d: string, p: string, s: 'day'|'pm'|'hs'|'jeop', site: string }} Shift
+ * @typedef {{ shifts: Shift[], violations: string[] }} AlgorithmResult
+ */
+
+/**
+ * Run the greedy weighted round-robin scheduling algorithm.
+ * @param {Object} params
+ * @returns {AlgorithmResult}
+ */
+function runAlgorithm({
+  startDate,
+  endDate,
+  providers,
+  fteDefaults,
+  fteHsDefaults,
+  shiftNotes,
+  siteRestrictions,
+  adminOverrides = {},
+  siteCfg = {
+    Green:    { minDay:5, maxDay:6, wkndMinDay:5, wkndMaxDay:6, pmSlots:2, hsSlots:1 },
+    Memorial: { minDay:5, maxDay:7, wkndMinDay:5, wkndMaxDay:7, pmSlots:1, hsSlots:1 },
+  },
+  allPrefs = {},
+}) {
+  // ── Vacation blackout helper ────────────────────────────────────────────────
+  const isBlocked = (p, d) => {
+    const pPrefs = allPrefs[p] || {};
+    for (const [sk, ek] of [['vac1s','vac1e'],['vac2s','vac2e']]) {
+      if (pPrefs[sk] && pPrefs[ek] && d >= pPrefs[sk] && d <= pPrefs[ek]) return true;
+    }
+    return false;
+  };
+
+  // ── Build provider profiles ─────────────────────────────────────────────────
+  const profiles = {};
+  for (const p of providers) {
+    const ov   = adminOverrides[p] || {};
+    const note = (ov.shiftNote !== undefined ? ov.shiftNote : (shiftNotes[p] || '')).toLowerCase();
+    const hsFte = ov.hsFte !== undefined ? Number(ov.hsFte) : (fteHsDefaults[p] || 0);
+    const fte   = ov.fte   !== undefined ? Number(ov.fte)   : (fteDefaults[p]   || 1.0);
+    const isPMonly  = note.includes('pms only') || note.includes('pm only');
+    const isHSorPM  = note.includes('hs or pm') || (note.includes('no days') && !isPMonly);
+    const isDayonly = note.includes('days only');
+    profiles[p] = {
+      fte, hsFte,
+      pattern: ov.pattern || 'flexible',
+      dayEligible: !isPMonly && !isHSorPM && hsFte < fte,
+      hsEligible:  hsFte > 0,
+      pmEligible:  !isDayonly,
+      siteRestriction: (siteRestrictions || {})[p] || null,
+    };
+  }
+
+  // ── Build date list ─────────────────────────────────────────────────────────
+  const dates = [];
+  let cur = new Date(startDate + 'T12:00:00Z');
+  const endD = new Date(endDate + 'T12:00:00Z');
+  while (cur <= endD) {
+    dates.push(cur.toISOString().slice(0, 10));
+    cur.setUTCDate(cur.getUTCDate() + 1);
+  }
+  if (dates.length === 0) return { shifts: [], violations: [] };
+
+  const periodMonths = dates.length / 30.4167;
+
+  // ── FTE targets ─────────────────────────────────────────────────────────────
+  const dayTarget = p => {
+    const pr = profiles[p];
+    const dayFteFrac = pr.hsFte ? Math.max(0, pr.fte * (1 - pr.hsFte)) : pr.fte;
+    return dayFteFrac * 14 * periodMonths;
+  };
+  const hsTarget = p => profiles[p].hsFte * 12 * periodMonths;
+
+  const assigned = {};
+  for (const p of providers) assigned[p] = { day: 0, hs: 0 };
+  const dayRatio = p => assigned[p].day / Math.max(0.001, dayTarget(p));
+  const hsRatio  = p => assigned[p].hs  / Math.max(0.001, hsTarget(p));
+
+  // ── Per-day tracking ────────────────────────────────────────────────────────
+  const busy   = {};   // date -> Set<provider> — anyone assigned any shift
+  const result = [];
+  const violations = [];
+
+  for (const d of dates) busy[d] = new Set();
+
+  const addShift = (d, p, s, site) => {
+    result.push({ d, p, s, site });
+    busy[d].add(p);
+    if (s === 'day' || s === 'pm') assigned[p].day++;
+    else if (s === 'hs') assigned[p].hs++;
+  };
+
+  // ── Group dates into Mon–Sun weeks ──────────────────────────────────────────
+  const weeks = [];
+  let i = 0;
+  const firstDow = new Date(dates[0] + 'T12:00:00Z').getUTCDay(); // 0=Sun
+  const offsetToMon = firstDow === 0 ? 1 : firstDow === 1 ? 0 : 8 - firstDow;
+  if (offsetToMon > 0 && offsetToMon < dates.length) {
+    weeks.push(dates.slice(0, offsetToMon)); i = offsetToMon;
+  } else if (offsetToMon === 0) { i = 0; }
+  else { weeks.push(dates); i = dates.length; }
+  while (i < dates.length) { weeks.push(dates.slice(i, i + 7)); i += 7; }
+
+  // ── Main loop ───────────────────────────────────────────────────────────────
+  for (const week of weeks) {
+    // 1. Day block assignment (week-level, per site)
+    for (const site of ['Green', 'Memorial']) {
+      const cfg    = siteCfg[site];
+      const wknd   = [0, 6].includes(new Date(week[0] + 'T12:00:00Z').getUTCDay());
+      const minT   = wknd ? cfg.wkndMinDay : cfg.minDay;
+      const maxT   = wknd ? cfg.wkndMaxDay : cfg.maxDay;
+
+      const pool = providers
+        .filter(p => {
+          const pr = profiles[p];
+          if (!pr.dayEligible) return false;
+          if (pr.siteRestriction && pr.siteRestriction !== site) return false;
+          return week.some(d => !isBlocked(p, d));
+        })
+        .sort((a, b) => dayRatio(a) - dayRatio(b))
+        .slice(0, maxT);
+
+      if (pool.length < minT) {
+        violations.push(`Week of ${week[0]}: ${site} day teams short (${pool.length}/${minT})`);
+      }
+
+      for (const p of pool) {
+        for (const d of week) {
+          if (!isBlocked(p, d) && !busy[d].has(p)) {
+            addShift(d, p, 'day', site);
+          }
+        }
+      }
+    }
+
+    // 2. Per-day: PMs, HS, Jeopardy
+    for (const d of week) {
+      // PM slots
+      for (const site of ['Green', 'Memorial']) {
+        const slots  = siteCfg[site].pmSlots;
+        const pmPool = providers
+          .filter(p => {
+            const pr = profiles[p];
+            if (!pr.pmEligible) return false;
+            if (pr.siteRestriction && pr.siteRestriction !== site) return false;
+            return !isBlocked(p, d) && !busy[d].has(p);
+          })
+          .sort((a, b) => dayRatio(a) - dayRatio(b));
+        for (let j = 0; j < Math.min(slots, pmPool.length); j++) addShift(d, pmPool[j], 'pm', site);
+        if (pmPool.length < slots) violations.push(`${d}: ${site} PM short (${pmPool.length}/${slots})`);
+      }
+
+      // HS slots
+      for (const site of ['Green', 'Memorial']) {
+        const slots  = siteCfg[site].hsSlots;
+        const hsPool = providers
+          .filter(p => {
+            const pr = profiles[p];
+            if (!pr.hsEligible) return false;
+            if (pr.siteRestriction && pr.siteRestriction !== site) return false;
+            return !isBlocked(p, d) && !busy[d].has(p);
+          })
+          .sort((a, b) => hsRatio(a) - hsRatio(b));
+        for (let j = 0; j < Math.min(slots, hsPool.length); j++) addShift(d, hsPool[j], 'hs', site);
+        if (hsPool.length < slots) violations.push(`${d}: ${site} HS short`);
+      }
+
+      // Jeopardy (1 per day, from most-behind available provider)
+      const jeop = providers
+        .filter(p => !isBlocked(p, d) && !busy[d].has(p))
+        .sort((a, b) => dayRatio(a) - dayRatio(b));
+      if (jeop.length > 0) addShift(d, jeop[0], 'jeop', '?');
+      else violations.push(`${d}: No jeopardy provider available`);
+    }
+  }
+
+  return { shifts: result, violations };
+}
+
+
+// ===== SCHEDULE UI LOGIC =====
+let schInited = false;
+function initSchedule() {
+  if (schInited) return;
+  schInited = true;
+  const sel = document.getElementById('sch-provider');
+  PROVIDERS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p;
+    opt.textContent = providerName(p) + ' (' + p + ')';
+    sel.appendChild(opt);
+  });
+  lookupByDate();
+}
+
+function siteBadgeColor(site) {
+  if (site === 'Green') return 'background:#e8f5e9;color:#1b5e20';
+  if (site === 'Memorial') return 'background:#e8f0fe;color:#1a3a7a';
+  return 'background:#f0f0ee;color:#666';
+}
+
+function lookupByDate() {
+  const d = document.getElementById('sch-date').value;
+  const out = document.getElementById('sch-date-result');
+  if (!d) { out.innerHTML = ''; return; }
+  const shifts = SCHEDULE_BASE.filter(s => s.d === d);
+  if (shifts.length === 0) {
+    out.innerHTML = '<div class="ft-no-match" style="margin-top:8px">No schedule data for this date. Loaded range: Jun 29 \u2013 Aug 30, 2026.</div>';
+    return;
+  }
+  const order = { day: 0, pm: 1, hs: 2, jeop: 3 };
+  shifts.sort((a, b) => (order[a.s] - order[b.s]) || a.p.localeCompare(b.p));
+  let html = '<div class="nbox" style="margin-top:8px">';
+  for (const sh of shifts) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e5e5e2">' +
+      '<div><strong>' + providerName(sh.p) + '</strong> <span style="color:#888;font-size:11px">(' + sh.p + ')</span><br>' +
+      '<span style="font-size:11px;color:#888">' + SHIFT_LABELS[sh.s] + ' \u00b7 ' + SHIFT_TIMES[sh.s] + (providerPager(sh.p) ? ' \u00b7 ' + providerPager(sh.p) : '') + '</span></div>' +
+      '<span style="font-size:11px;padding:3px 9px;border-radius:20px;' + siteBadgeColor(sh.site) + '">' + sh.site + '</span>' +
+      '</div>';
+  }
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+function lookupByProvider() {
+  const p = document.getElementById('sch-provider').value;
+  const out = document.getElementById('sch-provider-result');
+  if (!p) { out.innerHTML = ''; return; }
+  const shifts = SCHEDULE_BASE.filter(s => s.p === p).sort((a, b) => a.d.localeCompare(b.d));
+  if (shifts.length === 0) {
+    out.innerHTML = '<div class="ft-no-match" style="margin-top:8px">No shifts found for this provider in the loaded range.</div>';
+    return;
+  }
+  let html = '<div class="nbox" style="margin-top:8px;max-height:320px;overflow-y:auto">';
+  html += '<div style="font-size:11px;color:#888;margin-bottom:6px">' + shifts.length + ' shifts \u00b7 pager: ' + (providerPager(p) || 'n/a') + '</div>';
+  for (const sh of shifts) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #e5e5e2">' +
+      '<div><strong>' + sh.d + '</strong> <span style="font-size:11px;color:#888">' + SHIFT_LABELS[sh.s] + '</span></div>' +
+      '<span style="font-size:11px;padding:3px 9px;border-radius:20px;' + siteBadgeColor(sh.site) + '">' + sh.site + '</span>' +
+      '</div>';
+  }
+  html += '</div>';
+  out.innerHTML = html;
+}
+
+function generateDraft() {
+  const start = document.getElementById('gen-start').value;
+  const end = document.getElementById('gen-end').value;
+  const out = document.getElementById('gen-result');
+  if (!start || !end) { out.innerHTML = '<div class="res warn"><h3>Missing dates</h3><p>Please select both a start and end date.</p></div>'; return; }
+  if (new Date(end) < new Date(start)) { out.innerHTML = '<div class="res warn"><h3>Invalid range</h3><p>End date must be after start date.</p></div>'; return; }
+
+  out.innerHTML = '<div class="ft-no-match" style="color:#1a56db">Generating draft schedule\u2026</div>';
+
+  setTimeout(() => {
+    try {
+      const { shifts, violations } = runAlgorithm({
+        startDate: start,
+        endDate: end,
+        providers: PROVIDERS,
+        fteDefaults: FTE_DEFAULTS,
+        fteHsDefaults: FTE_HS_DEFAULTS,
+        shiftNotes: SHIFT_NOTES,
+        siteRestrictions: SITE_RESTRICTIONS,
+        adminOverrides: {},
+        allPrefs: {},
+      });
+
+      const byDate = {};
+      shifts.forEach(sh => { (byDate[sh.d] = byDate[sh.d] || []).push(sh); });
+      const dates = Object.keys(byDate).sort();
+      const order = { day: 0, pm: 1, hs: 2, jeop: 3 };
+
+      let html = '<div class="res ' + (violations.length ? 'warn' : 'yes') + '">' +
+        '<h3>' + (violations.length ? '\u26a0 Draft generated with ' + violations.length + ' coverage gap(s)' : '\u2713 Draft generated \u2014 full coverage') + '</h3>' +
+        '<p>' + shifts.length + ' shifts across ' + dates.length + ' days, ' + PROVIDERS.length + ' providers.</p></div>';
+
+      if (violations.length) {
+        html += '<div class="nbox" style="max-height:160px;overflow-y:auto;margin-bottom:10px">' +
+          violations.map(v => '\u2022 ' + v).join('<br>') + '</div>';
+      }
+
+      html += '<div class="nbox" style="max-height:380px;overflow-y:auto">';
+      for (const d of dates) {
+        const dayShifts = byDate[d].slice().sort((a, b) => (order[a.s] - order[b.s]) || a.p.localeCompare(b.p));
+        html += '<div style="margin-bottom:10px"><strong style="font-size:12px">' + d + '</strong><div style="margin-top:4px">';
+        for (const sh of dayShifts) {
+          html += '<span style="display:inline-block;font-size:11px;padding:2px 8px;margin:2px;border-radius:14px;' + siteBadgeColor(sh.site) + '">' +
+            sh.p + ' \u00b7 ' + SHIFT_LABELS[sh.s] + '</span>';
+        }
+        html += '</div></div>';
+      }
+      html += '</div>';
+
+      out.innerHTML = html;
+    } catch (e) {
+      out.innerHTML = '<div class="res no"><h3>Error generating draft</h3><p>' + e.message + '</p></div>';
+    }
+  }, 50);
+}
+
 </script>
 </body>
 </html>
