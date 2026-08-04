@@ -173,6 +173,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-onboard" onclick="show('onboard')">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Onboarding
     </div>
+    <div class="nav-item" id="nav-resident" onclick="show('resident')">
+      <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> Resident rules
+    </div>
     <div class="nav-item" id="nav-help" onclick="show('help')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> How to use
     </div>
@@ -376,6 +379,148 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="pfoot">📋 Based on your onboarding document · Last updated 6/9/26</div>
     </div>
 
+    <!-- RESIDENT RULES -->
+    <div class="panel" id="panel-resident">
+      <div class="ph"><h1>IM Resident rules</h1><span class="badge-blue">For hospitalist reference only</span></div>
+      <div class="sscroll">
+
+        <div class="res warn" style="margin-bottom:16px">
+          <h3>⚠️ For hospitalist attendings only</h3>
+          <p>This section covers internal medicine resident workflow and caps to help hospitalists coordinate care. These are NOT hospitalist operations rules. Resident program rules are managed by the residency program — confirm with the team for real-time status.</p>
+        </div>
+
+        <!-- CALL CYCLE -->
+        <div class="sq">🔄 Call cycle</div>
+        <div class="sd">The call cycle runs: Long → Post → Short → Pre, then repeats.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+          <div class="vcard primary">
+            <h3>Long call</h3>
+            <p>Full teach team: up to 8 new patients per intern (3 during first 8 weeks of AY). Senior resident: up to 5 new patients.
+
+Overnight patient assignments count toward new patient cap if intern census reaches 5+.
+
+1 new patient max per intern after 5:30pm.
+Sign out from post-call team no sooner than 4pm if criteria met.</p>
+          </div>
+          <div class="vcard consult">
+            <h3>Post call</h3>
+            <p>Full teach team: finish out 4 new patients on long call per intern (3 in first 8 weeks).
+Thu–Sun: interns off.
+Sign out as early as 4pm to long call only if criteria met.
+When interns are off, resident handles all patient care and completes all notes.</p>
+          </div>
+          <div class="vcard specialty">
+            <h3>Short call</h3>
+            <p>Full teach team: up to 4 new patients per intern (2 new for sub-Is). 1 new patient max per intern after 3:30pm. No admissions after 4pm.
+Senior resident: up to 3 new patients. No admits after 4pm.
+15–20 min attending-lead chalk talk.</p>
+          </div>
+          <div class="vcard warn">
+            <h3>Pre call</h3>
+            <p>Full teach team: finish out 2 new patients on short call per intern.
+Thu–Sun: resident off.
+Didactics 3–4pm (med student, intern, senior resident + attending).
+Discharge planning completed before 6pm.
+Bedside rounding highly encouraged.</p>
+          </div>
+        </div>
+
+        <!-- CAPS -->
+        <div class="sq">📊 Patient caps</div>
+        <div class="sd">These are the maximum patients per role. Caps apply year-round unless otherwise noted.</div>
+        <div class="nbox" style="margin-bottom:14px;line-height:2.2">
+          <strong>Intern cap:</strong> 9 (8 during first 8 weeks of academic year)<br>
+          <strong>PGY-2 junior hospitalist cap:</strong> 10<br>
+          <strong>PGY-3 junior hospitalist cap:</strong> 12<br>
+          <strong>MS3 cap:</strong> 4 (notes cosigned by intern)<br>
+          <strong>Sub-I cap:</strong> 6 (notes cosigned by resident)<br>
+          <strong>Team cap:</strong> 18 (MS3/Sub-I presence does NOT change this)<br>
+          <br>
+          <em style="color:#888;font-size:11px">Sub-I admissions count toward the team new patient cap but do NOT count toward overnight patient assignment thresholds for each intern.</em>
+        </div>
+
+        <!-- LOW CENSUS RULE -->
+        <div class="sq">📉 Low census rule</div>
+        <div class="nbox" style="margin-bottom:14px;border-left:3px solid #f59e0b">
+          Regardless of the day in the call cycle, residents can be assigned overnight admissions to bring their census up to:
+
+          <strong>• 4 patients</strong> for interns
+
+          <strong>• 5 patients</strong> for PGY-2
+
+          <strong>• 6 patients</strong> for PGY-3
+
+
+          If post-call or pre-call and the long/short call admission caps were not met the day prior, the resident should first be assigned overnight patients to finish out their cap from the prior call day — then additional overnight patients assigned only if census remains below the thresholds above.
+        </div>
+
+        <!-- SIGN OUT -->
+        <div class="sq">🚪 Sign out rules</div>
+        <div class="nbox" style="margin-bottom:8px">
+          <strong>Standard sign out:</strong> 6:00 PM to night float (senior residents, or interns if resident's day off).<br>
+          <strong>Must use I-PASS method.</strong><br><br>
+          <strong>Early sign out (4pm to long call):</strong> Only if ALL criteria are met:<br>
+          • Patients are stable, family updated, loops closed with consult services<br>
+          • ICU aware of any sick patients<br>
+          • No major tests requiring follow-up without contingencies<br>
+          • Discharges prepared (pended orders + summaries)<br>
+          • Printed list and verbal sign-out provided to long call team<br>
+          • Primary team responsible for Epic chats until verbal sign-out given to night float<br><br>
+          <strong>Post-call days:</strong> Can sign out at 4pm to long call if criteria met.<br>
+          <strong>All other days:</strong> Earliest sign out is 6pm.<br><br>
+          If leaving early: must print and leave sign-out for both long call resident AND night float. Sign-out must include resident/intern phone number so night float can call to verbally sign out at 6pm. Must answer pages in Epic until sign-out complete. Transition treatment teams in Epic when night float arrives at 6pm.
+        </div>
+
+        <!-- NIGHT FLOAT -->
+        <div class="sq" style="margin-top:8px">🌙 Night float</div>
+        <div class="nbox" style="margin-bottom:14px">
+          <strong>Hours:</strong> 6:00 PM – 7:00 AM<br><br>
+          <strong>Admission caps:</strong><br>
+          • Intern: up to 4 patients (3 during first 8 weeks)<br>
+          • Resident: up to 3 patients (4 during first 8 weeks)<br>
+          • Max 2 admits after 4:00 AM<br>
+          • 1 admit after 4:30 AM<br>
+          • No admits after 5:00 AM<br><br>
+          <strong>Days off:</strong><br>
+          • Intern off: Sunday<br>
+          • Resident off: Saturday (always with covering senior resident)<br>
+          • Days off are Thursday, Friday, Saturday, or Sunday<br>
+          • Post-call: Interns, MS3s<br>
+          • Pre-call: Residents, sub-Is off
+        </div>
+
+        <!-- BOUNCEBACKS -->
+        <div class="sq">🔁 Bouncebacks</div>
+        <div class="nbox" style="margin-bottom:14px">
+          Bouncebacks include ICU downgrades (no time stipulations) and ED/UC admissions within a <strong>7-day discharge period</strong>, provided at least one team member is familiar with the patient. Continuity with the previous team (by COLOR) is required before transfer or discharge.<br><br>
+          • Bouncebacks do NOT count as a new admission but DO count toward total census cap<br>
+          • If bouncebacks present prior to 6pm any day, or 4pm on post-call days, it is the team's responsibility to complete the admission
+        </div>
+
+        <!-- HOSPITALIST ROLE -->
+        <div class="sq">🏥 Hospitalist role with teaching teams</div>
+        <div class="res info" style="margin-bottom:14px">
+          <h3>Important: hospitalists are consultants on teaching teams</h3>
+          <p>Hospital Medicine functions as <strong>consultants</strong> on teaching team patients and are strictly prohibited from entering orders or being the first call at any time unless this falls during conference.
+
+All bedside evaluations and orders must be managed by house staff.
+
+On pre-call days, bedside rounds and GOC discussions are highly encouraged with attending present to model and provide feedback.</p>
+        </div>
+
+        <!-- ACADEMICS -->
+        <div class="sq">📚 Academics & teaching</div>
+        <div class="nbox" style="margin-bottom:14px">
+          <strong>Morning report / noon conference:</strong> Mon–Fri 11:15 AM – 1:00 PM. Interns forward Epic chat to senior residents during this time.<br><br>
+          <strong>Chalk talks on short call days:</strong> Attendings lead a 15–20 min chalk talk. No specific time set.<br><br>
+          <strong>Pre-call didactics:</strong> 3:00–4:00 PM. Medical students and residents lead chalk talks with attending present for feedback.<br><br>
+          <strong>Discharge rounds:</strong> Every afternoon, day teams run the list to plan discharges for the following day in accordance with the 10/12/2 initiative. Goal: identify discharges, pend discharge orders, prepare discharge summaries before leaving — ensure discharge orders are signed by 10 AM daily.
+        </div>
+
+      </div>
+      <div class="pfoot">📋 IM Resident program rules · For hospitalist reference only · Confirm with house staff for real-time status</div>
+    </div>
+
     <!-- HOW TO USE -->
     <div class="panel" id="panel-help">
       <div class="ph"><h1>How to use this tool</h1><span class="badge-blue">Tips &amp; feedback</span></div>
@@ -551,7 +696,7 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help','sched'].forEach(n => {
+  ['qa','day','pm','route','onboard','help','sched','resident'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
