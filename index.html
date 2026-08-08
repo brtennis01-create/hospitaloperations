@@ -447,7 +447,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
           </div>
         </div>
         <div class="sq">Step 3 &mdash; Which block are you deciding flex for?</div>
-        <div style="font-size:12px;color:#666;margin:6px 0 10px">Select one or more. Mon/Tue carry higher admit volume.</div>
+        <div style="font-size:12px;color:#666;margin:6px 0 10px">Select one or more blocks. If deciding about flex Wed/Thu/Fri, remember that admission volumes on Monday/Tuesday tend to be the highest.</div>
         <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="flex-dow-btns"></div>
         <button class="ft-btn" onclick="flexRun()">&rarr; Get recommendation</button>
         <div id="flex-result" style="margin-top:14px"></div>
@@ -2354,8 +2354,8 @@ function initFlex() {
     });
   });
   var blocks = [
-    { id: 'block-motu',   label: 'Mon / Tue',       sub: 'high admit volume', days: ['Mon','Tue'],       active: true  },
-    { id: 'block-wethfr', label: 'Wed / Thu / Fri',  sub: '',                  days: ['Wed','Thu','Fri'], active: false },
+    { id: 'block-motu',   label: 'Mon / Tue',       sub: '',                  days: ['Mon','Tue'],       active: true  },
+    { id: 'block-wethfr', label: 'Wed / Thu / Fri',  sub: 'high admit volume', days: ['Wed','Thu','Fri'], active: false },
     { id: 'block-sasu',   label: 'Sat / Sun',        sub: '',                  days: ['Sat','Sun'],       active: false },
   ];
   flexBlocks = blocks;
