@@ -173,6 +173,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-onboard" onclick="show('onboard')">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Onboarding
     </div>
+    <div class="nav-item" id="nav-flex" onclick="show('flex')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> Flex decision
+    </div>
     <div class="nav-item" id="nav-resident" onclick="show('resident')">
       <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> Resident rules
     </div>
@@ -379,147 +382,162 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <div class="pfoot">📋 Based on your onboarding document · Last updated 6/9/26</div>
     </div>
 
+    <!-- FLEX DECISION -->
+    <div class="panel" id="panel-flex">
+      <div class="ph"><h1>Flex on/off decision</h1><span class="badge-blue">Census-based</span></div>
+      <div class="sscroll" id="flex-scroll">
+        <div class="sq">Step 1 &mdash; Enter current staffing</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px">
+          <div class="nbox" style="padding:12px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#1a3a7a">La Jolla</div>
+            <div style="margin-bottom:8px">
+              <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Residents currently at LJ?</label>
+              <select id="flex-lj-residents" onchange="syncResidents('lj')" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none">
+                <option value="yes">Yes</option>
+                <option value="no">No &mdash; residents at Green</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Base teams staffed</label>
+              <input type="number" id="flex-lj-teams" value="7" min="1" max="15" style="width:80px;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none">
+            </div>
+          </div>
+          <div class="nbox" style="padding:12px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px;color:#1b5e20">Scripps Green</div>
+            <div style="margin-bottom:8px">
+              <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Residents currently at Green?</label>
+              <select id="flex-green-residents" onchange="syncResidents('green')" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none">
+                <option value="no">No &mdash; residents at LJ</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:12px;color:#555;display:block;margin-bottom:3px">Base teams staffed</label>
+              <input type="number" id="flex-green-teams" value="6" min="1" max="15" style="width:80px;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none">
+            </div>
+          </div>
+        </div>
+        <div class="sq">Step 2 &mdash; Enter last 7 days of census</div>
+        <div class="nbox" style="margin:8px 0 10px;font-size:12px;color:#666"><strong>Try not to include incomplete days</strong> &mdash; skip any day where the census was partial or teams were missing.</div>
+        <div style="display:flex;gap:0;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;overflow:hidden;width:fit-content">
+          <button id="flex-mode-manual" onclick="flexSetMode('manual')" style="padding:7px 18px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#1a56db;color:#fff;cursor:pointer">Enter numbers</button>
+          <button id="flex-mode-paste" onclick="flexSetMode('paste')" style="padding:7px 18px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#fff;color:#888;cursor:pointer">Paste data</button>
+        </div>
+        <div id="flex-manual-mode">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1a3a7a;margin-bottom:8px">La Jolla &mdash; daily census</div>
+              <div id="flex-lj-inputs"></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1b5e20;margin-bottom:8px">Green &mdash; daily census</div>
+              <div id="flex-green-inputs"></div>
+            </div>
+          </div>
+        </div>
+        <div id="flex-paste-mode" style="display:none">
+          <div style="font-size:12px;color:#666;margin-bottom:8px">Paste comma or space-separated numbers, oldest to most recent.</div>
+          <div style="margin-bottom:10px">
+            <div style="font-size:12px;font-weight:600;color:#1a3a7a;margin-bottom:4px">La Jolla</div>
+            <textarea id="flex-lj-paste" rows="2" placeholder="e.g. 98, 102, 95, 104, 99, 101, 97" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="font-size:12px;font-weight:600;color:#1b5e20;margin-bottom:4px">Scripps Green</div>
+            <textarea id="flex-green-paste" rows="2" placeholder="e.g. 71, 68, 74, 70, 73, 69, 72" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+          </div>
+        </div>
+        <div class="sq">Step 3 &mdash; Which block are you deciding flex for?</div>
+        <div style="font-size:12px;color:#666;margin:6px 0 10px">Select one or more. Mon/Tue carry higher admit volume.</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap" id="flex-dow-btns"></div>
+        <button class="ft-btn" onclick="flexRun()">&rarr; Get recommendation</button>
+        <div id="flex-result" style="margin-top:14px"></div>
+      </div>
+      <div class="pfoot">Census-based flex decision tool &middot; Always use clinical judgment alongside these calculations</div>
+    </div>
+
     <!-- RESIDENT RULES -->
     <div class="panel" id="panel-resident">
       <div class="ph"><h1>IM Resident rules</h1><span class="badge-blue">For hospitalist reference only</span></div>
       <div class="sscroll">
-
         <div class="res warn" style="margin-bottom:16px">
-          <h3>⚠️ For hospitalist attendings only</h3>
-          <p>This section covers internal medicine resident workflow and caps to help hospitalists coordinate care. These are NOT hospitalist operations rules. Resident program rules are managed by the residency program — confirm with the team for real-time status.</p>
+          <h3>&#x26A0;&#xFE0F; For hospitalist attendings only</h3>
+          <p>This section covers internal medicine resident workflow and caps to help hospitalists coordinate care. These are NOT hospitalist operations rules. Confirm with the team for real-time status.</p>
         </div>
-
-        <!-- CALL CYCLE -->
-        <div class="sq">🔄 Call cycle</div>
-        <div class="sd">The call cycle runs: Long → Post → Short → Pre, then repeats.</div>
+        <div class="sq">&#x1F504; Call cycle</div>
+        <div class="sd">The call cycle runs: Long &#x2192; Post &#x2192; Short &#x2192; Pre, then repeats.</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
-          <div class="vcard primary">
-            <h3>Long call</h3>
-            <p>Full teach team: new patient cap 8, or up to 4 new patients per intern (3 during first 8 weeks of AY). Senior resident: up to 5 new patients.
+          <div class="vcard primary"><h3>Long call</h3><p>Full teach team: new patient cap 8, or up to 4 new patients per intern (3 during first 8 weeks of AY). Senior resident: up to 5 new patients.
 
 Overnight patient assignments count toward new patient cap if intern census reaches 5+.
 
 1 new patient max after 5:30pm. No admits after 6pm.
-Sign out from post-call team no sooner than 4pm if criteria met.</p>
-          </div>
-          <div class="vcard consult">
-            <h3>Post call</h3>
-            <p>Full teach team: finish out 4 new patients on long call per intern (3 in first 8 weeks).
-Thu–Sun: interns off.
+Sign out from post-call team no sooner than 4pm if criteria met.</p></div>
+          <div class="vcard consult"><h3>Post call</h3><p>Full teach team: finish out 4 new patients on long call per intern (3 in first 8 weeks).
+Thu-Sun: interns off.
 Sign out as early as 4pm to long call only if criteria met.
-When interns are off, resident handles all patient care and completes all notes.</p>
-          </div>
-          <div class="vcard specialty">
-            <h3>Short call</h3>
-            <p>Full teach team: new patient cap 4, or up to 2 new patients per intern. Senior resident: up to 3 new patients.
+When interns are off, resident handles all patient care and completes all notes.</p></div>
+          <div class="vcard specialty"><h3>Short call</h3><p>Full teach team: new patient cap 4, or up to 2 new patients per intern. Senior resident: up to 3 new patients.
 
 1 new patient max after 3:30pm. No admits after 4pm.
-15–20 min attending-lead chalk talk.</p>
-          </div>
-          <div class="vcard warn">
-            <h3>Pre call</h3>
-            <p>Full teach team: finish out 2 new patients on short call per intern.
-Thu–Sun: resident off.
-Didactics 3–4pm (med student, intern, senior resident + attending).
-Discharge planning completed before 6pm.
-Bedside rounding highly encouraged.</p>
-          </div>
+15-20 min attending-lead chalk talk.</p></div>
+          <div class="vcard warn"><h3>Pre call</h3><p>Full teach team: finish out 2 new patients on short call per intern.
+Thu-Sun: resident off.
+Didactics 3-4pm.
+Discharge planning before 6pm.
+Bedside rounding highly encouraged.</p></div>
         </div>
-
-        <!-- CAPS -->
-        <div class="sq">📊 Patient caps</div>
-        <div class="sd">These are the maximum patients per role. Caps apply year-round unless otherwise noted.</div>
+        <div class="sq">&#x1F4CA; Patient caps</div>
         <div class="nbox" style="margin-bottom:14px;line-height:2.2">
-          <strong>Intern cap:</strong> 9 (8 during first 8 weeks of academic year)<br>
+          <strong>Intern cap:</strong> 9 (8 during first 8 weeks of AY)<br>
           <strong>PGY-2 junior hospitalist cap:</strong> 10<br>
           <strong>PGY-3 junior hospitalist cap:</strong> 12<br>
           <strong>MS3 cap:</strong> 4 (notes cosigned by intern)<br>
           <strong>Sub-I cap:</strong> 6 (notes cosigned by resident)<br>
-          <strong>Team cap:</strong> 18 (MS3/Sub-I presence does NOT change this)<br>
-          <br>
-          <em style="color:#888;font-size:11px">Sub-I admissions count toward the team new patient cap but do NOT count toward overnight patient assignment thresholds for each intern.</em>
+          <strong>Team cap:</strong> 18 (MS3/Sub-I presence does NOT change this)
         </div>
-
-        <!-- LOW CENSUS RULE -->
-        <div class="sq">📉 Low census rule</div>
+        <div class="sq">&#x1F4C9; Low census rule</div>
         <div class="nbox" style="margin-bottom:14px;border-left:3px solid #f59e0b">
-          Regardless of the day in the call cycle, residents can be assigned overnight admissions to bring their census up to:
-
-          <strong>• 4 patients</strong> for interns
-
-          <strong>• 5 patients</strong> for PGY-2
-
-          <strong>• 6 patients</strong> for PGY-3
-
-
-          If post-call or pre-call and the long/short call admission caps were not met the day prior, the resident should first be assigned overnight patients to finish out their cap from the prior call day — then additional overnight patients assigned only if census remains below the thresholds above.
+          Residents can be assigned overnight admissions to bring census up to:<br>
+          <strong>4 patients</strong> for interns &nbsp;&middot;&nbsp; <strong>5</strong> for PGY-2 &nbsp;&middot;&nbsp; <strong>6</strong> for PGY-3
         </div>
-
-        <!-- SIGN OUT -->
-        <div class="sq">🚪 Sign out rules</div>
-        <div class="nbox" style="margin-bottom:8px">
-          <strong>Standard sign out:</strong> 6:00 PM to night float (senior residents, or interns if resident's day off).<br>
-          <strong>Must use I-PASS method.</strong><br><br>
-          <strong>Early sign out (4pm to long call):</strong> Only if ALL criteria are met:<br>
-          • Patients are stable, family updated, loops closed with consult services<br>
-          • ICU aware of any sick patients<br>
-          • No major tests requiring follow-up without contingencies<br>
-          • Discharges prepared (pended orders + summaries)<br>
-          • Printed list and verbal sign-out provided to long call team<br>
-          • Primary team responsible for Epic chats until verbal sign-out given to night float<br><br>
-          <strong>Post-call days:</strong> Can sign out at 4pm to long call if criteria met.<br>
-          <strong>All other days:</strong> Earliest sign out is 6pm.<br><br>
-          If leaving early: must print and leave sign-out for both long call resident AND night float. Sign-out must include resident/intern phone number so night float can call to verbally sign out at 6pm. Must answer pages in Epic until sign-out complete. Transition treatment teams in Epic when night float arrives at 6pm.
-        </div>
-
-        <!-- NIGHT FLOAT -->
-        <div class="sq" style="margin-top:8px">🌙 Night float</div>
+        <div class="sq">&#x1F6AA; Sign out rules</div>
         <div class="nbox" style="margin-bottom:14px">
-          <strong>Hours:</strong> 6:00 PM – 7:00 AM<br><br>
-          <strong>Admission caps:</strong><br>
-          • Intern: up to 4 patients (3 during first 8 weeks)<br>
-          • Resident: up to 3 patients (4 during first 8 weeks)<br>
-          • Max 2 admits after 4:00 AM<br>
-          • 1 admit after 4:30 AM<br>
-          • No admits after 5:00 AM<br><br>
-          <strong>Days off:</strong><br>
-          • Intern off: Sunday<br>
-          • Resident off: Saturday (always with covering senior resident)<br>
-          • Days off are Thursday, Friday, Saturday, or Sunday<br>
-          • Post-call: Interns, MS3s<br>
-          • Pre-call: Residents, sub-Is off
+          <strong>Standard:</strong> 6:00 PM to night float. Must use I-PASS method.<br><br>
+          <strong>Early sign out (4pm) criteria &mdash; ALL must be met:</strong><br>
+          &bull; Patients stable, family updated, loops closed with consults<br>
+          &bull; ICU aware of sick patients<br>
+          &bull; No major pending tests<br>
+          &bull; Discharges prepared (pended orders + summaries)<br>
+          &bull; Printed list and verbal sign-out given to long call team<br><br>
+          <strong>Post-call days:</strong> Can sign out at 4pm if criteria met.<br>
+          <strong>All other days:</strong> Earliest 6pm.
         </div>
-
-        <!-- BOUNCEBACKS -->
-        <div class="sq">🔁 Bouncebacks</div>
+        <div class="sq">&#x1F319; Night float</div>
         <div class="nbox" style="margin-bottom:14px">
-          Bouncebacks include ICU downgrades (no time stipulations) and ED/UC admissions within a <strong>7-day discharge period</strong>, provided at least one team member is familiar with the patient. Continuity with the previous team (by COLOR) is required before transfer or discharge.<br><br>
-          • Bouncebacks do NOT count as a new admission but DO count toward total census cap<br>
-          • If bouncebacks present prior to 6pm any day, or 4pm on post-call days, it is the team's responsibility to complete the admission
+          <strong>Hours:</strong> 6:00 PM &ndash; 7:00 AM<br><br>
+          Intern: up to 4 patients (3 in first 8 weeks) &nbsp;&middot;&nbsp; Resident: up to 3 (4 in first 8 weeks)<br>
+          Max 2 admits after 4:00 AM &nbsp;&middot;&nbsp; 1 after 4:30 AM &nbsp;&middot;&nbsp; No admits after 5:00 AM<br><br>
+          <strong>Days off:</strong> Intern off Sunday &nbsp;&middot;&nbsp; Resident off Saturday (with covering senior resident)
         </div>
-
-        <!-- HOSPITALIST ROLE -->
-        <div class="sq">🏥 Hospitalist role with teaching teams</div>
+        <div class="sq">&#x1F501; Bouncebacks</div>
+        <div class="nbox" style="margin-bottom:14px">
+          Includes ICU downgrades and ED/UC admissions within a <strong>7-day discharge period</strong> if a team member knows the patient. Continuity (by COLOR) required before transfer or discharge.<br><br>
+          &bull; Do NOT count as new admission but DO count toward census cap<br>
+          &bull; If present before 6pm (4pm on post-call), team completes the admission
+        </div>
         <div class="res info" style="margin-bottom:14px">
-          <h3>Important: hospitalists are consultants on teaching teams</h3>
-          <p>Hospital Medicine functions as <strong>consultants</strong> on teaching team patients and are strictly prohibited from entering orders or being the first call at any time unless this falls during conference.
-
-All bedside evaluations and orders must be managed by house staff.
-
-On pre-call days, bedside rounds and GOC discussions are highly encouraged with attending present to model and provide feedback.</p>
+          <h3>&#x1F3E5; Hospitalist role with teaching teams</h3>
+          <p>Hospitalists are <strong>consultants</strong> on teaching team patients &mdash; strictly prohibited from entering orders or being the first call at any time unless during conference. All bedside evaluations and orders must be managed by house staff.</p>
         </div>
-
-        <!-- ACADEMICS -->
-        <div class="sq">📚 Academics & teaching</div>
+        <div class="sq">&#x1F4DA; Academics</div>
         <div class="nbox" style="margin-bottom:14px">
-          <strong>Morning report / noon conference:</strong> Mon–Fri 11:15 AM – 1:00 PM. Interns forward Epic chat to senior residents during this time.<br><br>
-          <strong>Chalk talks on short call days:</strong> Attendings lead a 15–20 min chalk talk. No specific time set.<br><br>
-          <strong>Pre-call didactics:</strong> 3:00–4:00 PM. Medical students and residents lead chalk talks with attending present for feedback.<br><br>
-          <strong>Discharge rounds:</strong> Every afternoon, day teams run the list to plan discharges for the following day in accordance with the 10/12/2 initiative. Goal: identify discharges, pend discharge orders, prepare discharge summaries before leaving — ensure discharge orders are signed by 10 AM daily.
+          <strong>Morning report / noon conference:</strong> Mon-Fri 11:15 AM - 1:00 PM<br>
+          <strong>Chalk talks on short call days:</strong> 15-20 min, attending-led<br>
+          <strong>Pre-call didactics:</strong> 3:00-4:00 PM, residents + attending<br>
+          <strong>Discharge rounds:</strong> Daily &mdash; plan discharges, pend orders, prepare summaries. Discharge orders signed by 10 AM daily (10/12/2 initiative).
         </div>
-
       </div>
-      <div class="pfoot">📋 IM Resident program rules · For hospitalist reference only · Confirm with house staff for real-time status</div>
+      <div class="pfoot">&#x1F4CB; IM Resident program rules &middot; For hospitalist reference only &middot; Confirm with house staff for real-time status</div>
     </div>
 
     <!-- HOW TO USE -->
@@ -697,7 +715,7 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help','sched','resident'].forEach(n => {
+  ['qa','day','pm','route','onboard','help','sched','resident','flex'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
@@ -705,6 +723,7 @@ function show(name) {
   if (name==='pm') renderPM();
   if (name==='route') renderGuided();
   if (name==='sched') initSchedule();
+  if (name==='flex') initFlex();
 }
 
 function switchSchTab(tab) {
@@ -2274,6 +2293,199 @@ function generateDraft() {
       out.innerHTML = '<div class="res no"><h3>Error generating draft</h3><p>' + e.message + '</p></div>';
     }
   }, 50);
+}
+
+
+// ===== FLEX DECISION ENGINE =====
+const HIGH_RISK = ["Mon","Tue"];
+const DOW_ORDER = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
+var flexBlocks = [];
+var flexMode = 'manual';
+var flexInited = false;
+
+function syncResidents(changed) {
+  var ljSel    = document.getElementById('flex-lj-residents');
+  var greenSel = document.getElementById('flex-green-residents');
+  if (!ljSel || !greenSel) return;
+  if (changed === 'lj') greenSel.value = ljSel.value === 'yes' ? 'no' : 'yes';
+  else ljSel.value = greenSel.value === 'yes' ? 'no' : 'yes';
+}
+
+function flexSetMode(mode) {
+  flexMode = mode;
+  var manDiv = document.getElementById('flex-manual-mode');
+  var pasDiv = document.getElementById('flex-paste-mode');
+  var mBtn   = document.getElementById('flex-mode-manual');
+  var pBtn   = document.getElementById('flex-mode-paste');
+  if (manDiv) manDiv.style.display = mode === 'manual' ? 'block' : 'none';
+  if (pasDiv) pasDiv.style.display = mode === 'paste'  ? 'block' : 'none';
+  if (mBtn) { mBtn.style.background = mode==='manual'?'#1a56db':'#fff'; mBtn.style.color = mode==='manual'?'#fff':'#888'; }
+  if (pBtn) { pBtn.style.background = mode==='paste'?'#1a56db':'#fff';  pBtn.style.color = mode==='paste'?'#fff':'#888'; }
+}
+
+function flexToggleBlock(id) {
+  flexBlocks.forEach(function(b) {
+    if (b.id === id) b.active = !b.active;
+    var btn = document.getElementById(b.id);
+    if (btn) {
+      btn.style.borderColor = b.active ? '#1a56db' : '#ddd';
+      btn.style.background  = b.active ? '#e8f0fe' : '#fff';
+      btn.style.color       = b.active ? '#1a56db' : '#888';
+      btn.style.fontWeight  = b.active ? '600' : '400';
+    }
+  });
+}
+
+function initFlex() {
+  if (flexInited) return;
+  flexInited = true;
+  var days = ['Day 1 (oldest)','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7 (most recent)'];
+  ['lj','green'].forEach(function(site) {
+    var container = document.getElementById('flex-' + site + '-inputs');
+    if (!container) return;
+    days.forEach(function(label, i) {
+      var row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
+      row.innerHTML = '<label style="font-size:11px;color:#888;min-width:110px">' + label + '</label>' +
+        '<input type="number" id="flex-' + site + '-' + i + '" min="0" max="200" placeholder="--" ' +
+        'style="width:70px;padding:5px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none">';
+      container.appendChild(row);
+    });
+  });
+  var blocks = [
+    { id: 'block-motu',   label: 'Mon / Tue',       sub: 'high admit volume', days: ['Mon','Tue'],       active: true  },
+    { id: 'block-wethfr', label: 'Wed / Thu / Fri',  sub: '',                  days: ['Wed','Thu','Fri'], active: false },
+    { id: 'block-sasu',   label: 'Sat / Sun',        sub: '',                  days: ['Sat','Sun'],       active: false },
+  ];
+  flexBlocks = blocks;
+  var dowBtns = document.getElementById('flex-dow-btns');
+  if (!dowBtns) return;
+  dowBtns.innerHTML = '';
+  blocks.forEach(function(block) {
+    var btn = document.createElement('button');
+    btn.id = block.id;
+    btn.innerHTML = '<strong>' + block.label + '</strong>' + (block.sub ? '<br><span style="font-size:10px;opacity:0.65">' + block.sub + '</span>' : '');
+    btn.style.cssText = 'padding:8px 16px;border-radius:8px;border:1px solid ' +
+      (block.active?'#1a56db':'#ddd') + ';background:' + (block.active?'#e8f0fe':'#fff') + ';color:' +
+      (block.active?'#1a56db':'#888') + ';font-size:12px;font-family:inherit;cursor:pointer;text-align:left;' +
+      'font-weight:' + (block.active?'600':'400');
+    btn.onclick = (function(b){ return function(){ flexToggleBlock(b.id); }; })(block);
+    dowBtns.appendChild(btn);
+  });
+}
+
+function flexRequiredAtTarget(census, residentsHere) {
+  var teachingAbsorb = residentsHere ? 59 : 0;
+  var teachingTeams  = residentsHere ? 4  : 0;
+  var specialty = 14;
+  return 1 + teachingTeams + (census - specialty - teachingAbsorb) / 12.5;
+}
+
+function flexStats(arr) {
+  if (!arr.length) return { avg: null, trend: 0, n: 0 };
+  var avg = arr.reduce(function(a,b){ return a+b; }, 0) / arr.length;
+  if (arr.length < 4) return { avg: avg, trend: 0, n: arr.length };
+  var h  = Math.floor(arr.length / 2);
+  var om = arr.slice(0, h).reduce(function(a,b){ return a+b; }, 0) / h;
+  var nm = arr.slice(-h).reduce(function(a,b){ return a+b; }, 0) / h;
+  return { avg: avg, trend: nm - om, n: arr.length };
+}
+
+function flexRun() {
+  var resultDiv = document.getElementById('flex-result');
+  var ljRes     = document.getElementById('flex-lj-residents').value;
+  var residents = (ljRes === 'yes') ? 'lj' : 'green';
+  var ljTeams   = parseInt(document.getElementById('flex-lj-teams').value)    || 7;
+  var grTeams   = parseInt(document.getElementById('flex-green-teams').value) || 6;
+
+  var ljVals = [], grVals = [];
+  if (flexMode === 'manual') {
+    for (var i = 0; i < 7; i++) {
+      var le = document.getElementById('flex-lj-' + i);
+      var ge = document.getElementById('flex-green-' + i);
+      if (le) { var lv = le.value.trim(); if (lv !== '' && !isNaN(+lv)) ljVals.push(+lv); }
+      if (ge) { var gv = ge.value.trim(); if (gv !== '' && !isNaN(+gv)) grVals.push(+gv); }
+    }
+  } else {
+    var parsePaste = function(str) {
+      return str.split(/[,\s]+/).map(function(s){ return s.trim(); })
+        .filter(function(s){ return s !== '' && !isNaN(+s); }).map(Number);
+    };
+    var lp = document.getElementById('flex-lj-paste');
+    var gp = document.getElementById('flex-green-paste');
+    if (lp) ljVals = parsePaste(lp.value);
+    if (gp) grVals = parsePaste(gp.value);
+  }
+
+  if (ljVals.length < 3 && grVals.length < 3) {
+    resultDiv.innerHTML = '<div class="res warn"><h3>Not enough data</h3><p>Enter at least 3 days of census for each site.</p></div>';
+    return;
+  }
+
+  var swingSite = residents === 'lj' ? 'green' : 'lj';
+  var html = '';
+
+  var sites = [
+    { key: 'lj',    name: 'La Jolla',     color: '#1a3a7a', vals: ljVals, teams: ljTeams },
+    { key: 'green', name: 'Scripps Green', color: '#1b5e20', vals: grVals, teams: grTeams },
+  ];
+
+  sites.forEach(function(site) {
+    var vals      = site.vals;
+    var baseTeams = site.teams;
+    if (vals.length < 3) {
+      html += '<div class="res warn" style="margin-bottom:10px"><h3>' + site.name + '</h3><p>Not enough data &mdash; enter at least 3 days.</p></div>';
+      return;
+    }
+    var residentsHere = (site.key === residents);
+    var thisIsSwing   = (site.key === swingSite);
+    var s      = flexStats(vals);
+    var recent = vals[vals.length - 1];
+    var req    = flexRequiredAtTarget(recent, residentsHere);
+    var gap    = req - baseTeams;
+    var rising = s.trend >= 3;
+    var activeBlocks = flexBlocks.filter(function(b){ return b.active; });
+    var activeDays   = activeBlocks.reduce(function(acc,b){ return acc.concat(b.days); }, []);
+    var hr = thisIsSwing ? activeDays.filter(function(d){ return HIGH_RISK.indexOf(d) >= 0; }) : [];
+
+    var rec, note, tone;
+    if (gap >= 0.6) {
+      rec  = 'Flex ON';
+      note = 'Needs ' + req.toFixed(1) + ' teams at target vs ' + baseTeams + ' staffed &mdash; short ' + gap.toFixed(1) + '.' +
+             (rising ? ' Census is rising.' : '') + (hr.length ? ' Mon/Tue block carries elevated admit risk.' : '');
+      tone = 'yes';
+    } else if (gap < 0.6 && hr.length) {
+      rec  = 'Hold &mdash; Flex ON for Mon/Tue';
+      note = 'Census is soft overall but Mon/Tue carry elevated admit risk. Consider flex off for Wed&ndash;Fri and Sat/Sun blocks only.';
+      tone = 'warn';
+    } else if (gap < 0.6 && rising) {
+      rec  = 'Caution &mdash; census rising';
+      note = 'Average within target but trending up. Flex-off now risks being short by mid-week.';
+      tone = 'warn';
+    } else if (gap >= 0.25) {
+      rec  = 'Marginal &mdash; consider split week';
+      note = 'Gap ' + gap.toFixed(1) + '. Low-risk blocks (Wed&ndash;Fri, Sat/Sun) may be sufficient.';
+      tone = 'info';
+    } else {
+      rec  = 'Flex OFF';
+      note = 'Census within target, not rising, no high-risk blocks selected.';
+      tone = 'no';
+    }
+
+    var trendLabel = s.trend >= 3 ? '↑ rising' : s.trend <= -3 ? '↓ falling' : '→ flat';
+    html += '<div style="margin-bottom:14px">' +
+      '<div style="font-size:13px;font-weight:600;color:' + site.color + ';margin-bottom:6px">' + site.name + '</div>' +
+      '<div class="res info" style="margin-bottom:6px"><p>' +
+      'Avg ' + s.avg.toFixed(0) + ' &middot; ' + trendLabel + ' &middot; ' + vals.length + ' days &middot; Most recent: ' + recent + '<br>' +
+      'Required: ' + req.toFixed(1) + ' teams &middot; Staffed: ' + baseTeams + ' &middot; Gap: ' + (gap > 0 ? '+' : '') + gap.toFixed(1) +
+      '</p></div>' +
+      '<div class="res ' + tone + '"><p style="font-size:18px;font-weight:700;margin-bottom:6px">' + rec + '</p>' +
+      '<p>' + note + '</p></div></div>';
+  });
+
+  resultDiv.innerHTML = html;
+  resultDiv.scrollIntoView({ behavior: 'smooth' });
 }
 
 </script>
