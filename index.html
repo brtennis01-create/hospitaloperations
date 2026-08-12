@@ -417,11 +417,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
             </div>
           </div>
         </div>
-        <div class="sq">Step 2 &mdash; Enter last 7 days of census</div>
-        <div class="nbox" style="margin:8px 0 10px;font-size:12px;color:#666"><strong>Try not to include incomplete days</strong> &mdash; skip any day where the census was partial or teams were missing.</div>
+        <div class="sq">Step 2 &mdash; Enter census data</div>
+        <div class="nbox" style="margin:8px 0 10px;font-size:12px;color:#666"><strong>Try not to include incomplete days</strong> &mdash; skip any day where the census was partial or teams were missing. Choose your input method:</div>
         <div style="display:flex;gap:0;margin-bottom:12px;border:1px solid #ddd;border-radius:8px;overflow:hidden;width:fit-content">
-          <button id="flex-mode-manual" onclick="flexSetMode('manual')" style="padding:7px 18px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#1a56db;color:#fff;cursor:pointer">Enter numbers</button>
-          <button id="flex-mode-paste" onclick="flexSetMode('paste')" style="padding:7px 18px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#fff;color:#888;cursor:pointer">Paste data</button>
+          <button id="flex-mode-manual" onclick="flexSetMode('manual')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#1a56db;color:#fff;cursor:pointer">Enter numbers</button>
+          <button id="flex-mode-paste" onclick="flexSetMode('paste')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#fff;color:#888;cursor:pointer;border-left:1px solid #ddd">Paste numbers</button>
+          <button id="flex-mode-sheet" onclick="flexSetMode('sheet')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#fff;color:#888;cursor:pointer;border-left:1px solid #ddd">Paste sheet</button>
         </div>
         <div id="flex-manual-mode">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
@@ -437,13 +438,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
         </div>
         <div id="flex-paste-mode" style="display:none">
           <div style="font-size:12px;color:#666;margin-bottom:8px">Paste comma or space-separated numbers, oldest to most recent.</div>
-          <div style="margin-bottom:10px">
-            <div style="font-size:12px;font-weight:600;color:#1a3a7a;margin-bottom:4px">La Jolla</div>
-            <textarea id="flex-lj-paste" rows="2" placeholder="e.g. 98, 102, 95, 104, 99, 101, 97" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1a3a7a;margin-bottom:4px">La Jolla</div>
+              <textarea id="flex-lj-paste" rows="3" placeholder="e.g. 98, 102, 95, 104, 99, 101, 97" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1b5e20;margin-bottom:4px">Scripps Green</div>
+              <textarea id="flex-green-paste" rows="3" placeholder="e.g. 71, 68, 74, 70, 73, 69, 72" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+            </div>
           </div>
-          <div style="margin-bottom:12px">
-            <div style="font-size:12px;font-weight:600;color:#1b5e20;margin-bottom:4px">Scripps Green</div>
-            <textarea id="flex-green-paste" rows="2" placeholder="e.g. 71, 68, 74, 70, 73, 69, 72" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none"></textarea>
+        </div>
+        <div id="flex-sheet-mode" style="display:none">
+          <div class="nbox" style="font-size:12px;margin-bottom:10px;color:#666">Paste the tab-separated team-census sheet from the tracking workbook. Include the header row with team names (e.g. PINK, GREEN&hellip; or PLATINUM, PURPLE&hellip;), then dated daily rows. Parse each site separately.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px">
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1a3a7a;margin-bottom:4px">La Jolla sheet</div>
+              <textarea id="flex-lj-sheet" rows="5" placeholder="Paste LJ team-column sheet here..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:11px;font-family:monospace;resize:vertical;outline:none"></textarea>
+              <button class="gbtn" style="margin-top:4px" onclick="flexParseAndShow('lj')">Parse LJ &rarr;</button>
+              <div id="flex-lj-review"></div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:600;color:#1b5e20;margin-bottom:4px">Green sheet</div>
+              <textarea id="flex-green-sheet" rows="5" placeholder="Paste Green team-column sheet here..." style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:11px;font-family:monospace;resize:vertical;outline:none"></textarea>
+              <button class="gbtn" style="margin-top:4px" onclick="flexParseAndShow('green')">Parse Green &rarr;</button>
+              <div id="flex-green-review"></div>
+            </div>
           </div>
         </div>
         <div class="sq">Step 3 &mdash; Which block are you deciding flex for?</div>
@@ -2296,36 +2316,70 @@ function generateDraft() {
 }
 
 
-// ===== FLEX DECISION ENGINE =====
-const HIGH_RISK = ["Mon","Tue"];
-const DOW_ORDER = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
-var flexBlocks = [];
-var flexMode = 'manual';
-var flexInited = false;
+// ===== FLEX DECISION ENGINE (v2) =====
+// Anchored on per-team load at BASE staffing.
+// Trend and admit-risk can only ESCALATE toward flex ON, never permit flex OFF.
+// Sites are fully independent — no cross-site comparison.
 
-function syncResidents(changed) {
-  var ljSel    = document.getElementById('flex-lj-residents');
-  var greenSel = document.getElementById('flex-green-residents');
-  if (!ljSel || !greenSel) return;
-  if (changed === 'lj') greenSel.value = ljSel.value === 'yes' ? 'no' : 'yes';
-  else ljSel.value = greenSel.value === 'yes' ? 'no' : 'yes';
-}
+var TARGET_PER_TEAM = 12.5;  // sustainable load
+var MAX_PER_TEAM    = 13.5;  // above this = overloaded
+var ORTHO_SHARE     = 0.20;  // Green: assumed share of census that is ortho
+var ORTHO_WEIGHT    = 0.5;   // ortho counts as half a patient
+var GREEN_ADJ       = 1 - ORTHO_SHARE + ORTHO_SHARE * ORTHO_WEIGHT; // = 0.90
+
+var GREEN_TEAMS_LIST = ["PINK","GREEN","ORANGE","BLUE","TEAL","FUCHSIA","FUSCHIA","BMT","RED"];
+var LJ_TEAMS_LIST    = ["PLATINUM","PURPLE","YELLOW","COPPER","BRONZE","AMBER","GOLD","JADE"];
+
+// Wed/Thu/Fri is the high-risk flex-off block
+var BLOCK_RISK = { "Mon/Tue": false, "Wed/Thu/Fri": true, "Sat/Sun": false };
+
+var flexBlocks2    = [];
+var flexInited     = false;
+var flexLJParsed   = null;
+var flexGRParsed   = null;
 
 function flexSetMode(mode) {
   flexMode = mode;
-  var manDiv = document.getElementById('flex-manual-mode');
-  var pasDiv = document.getElementById('flex-paste-mode');
-  var mBtn   = document.getElementById('flex-mode-manual');
-  var pBtn   = document.getElementById('flex-mode-paste');
-  if (manDiv) manDiv.style.display = mode === 'manual' ? 'block' : 'none';
-  if (pasDiv) pasDiv.style.display = mode === 'paste'  ? 'block' : 'none';
-  if (mBtn) { mBtn.style.background = mode==='manual'?'#1a56db':'#fff'; mBtn.style.color = mode==='manual'?'#fff':'#888'; }
-  if (pBtn) { pBtn.style.background = mode==='paste'?'#1a56db':'#fff';  pBtn.style.color = mode==='paste'?'#fff':'#888'; }
+  ['manual','paste','sheet'].forEach(function(m) {
+    var div = document.getElementById('flex-' + m + '-mode');
+    var btn = document.getElementById('flex-mode-' + m);
+    if (div) div.style.display = (m === mode) ? 'block' : 'none';
+    if (btn) { btn.style.background = (m===mode)?'#1a56db':'#fff'; btn.style.color = (m===mode)?'#fff':'#888'; }
+  });
 }
 
-function flexToggleBlock(id) {
-  flexBlocks.forEach(function(b) {
+function initFlex() {
+  if (flexInited) return;
+  flexInited = true;
+  buildFlexBlocks();
+}
+
+function buildFlexBlocks() {
+  var dowBtns = document.getElementById('flex-dow-btns');
+  if (!dowBtns) return;
+  dowBtns.innerHTML = '';
+  var defs = [
+    { id: 'fb-motu',   label: 'Mon / Tue',      key: 'Mon/Tue',      active: false },
+    { id: 'fb-wethfr', label: 'Wed / Thu / Fri', key: 'Wed/Thu/Fri', active: true,  note: 'high admit volume \u26a0' },
+    { id: 'fb-sasu',   label: 'Sat / Sun',       key: 'Sat/Sun',      active: false },
+  ];
+  flexBlocks2 = defs;
+  defs.forEach(function(b) {
+    var btn = document.createElement('button');
+    btn.id = b.id;
+    btn.innerHTML = '<strong>' + b.label + '</strong>' + (b.note ? '<br><span style="font-size:10px;opacity:0.7">' + b.note + '</span>' : '');
+    btn.style.cssText = 'padding:8px 16px;border-radius:8px;border:1px solid ' +
+      (b.active?'#1a56db':'#ddd') + ';background:' + (b.active?'#e8f0fe':'#fff') +
+      ';color:' + (b.active?'#1a56db':'#888') + ';font-size:12px;font-family:inherit;' +
+      'cursor:pointer;text-align:left;font-weight:' + (b.active?'600':'400');
+    btn.onclick = (function(block){ return function(){ flexToggleBlock2(block.id); }; })(b);
+    dowBtns.appendChild(btn);
+  });
+}
+
+function flexToggleBlock2(id) {
+  flexBlocks2.forEach(function(b) {
     if (b.id === id) b.active = !b.active;
     var btn = document.getElementById(b.id);
     if (btn) {
@@ -2337,155 +2391,221 @@ function flexToggleBlock(id) {
   });
 }
 
-function initFlex() {
-  if (flexInited) return;
-  flexInited = true;
-  var days = ['Day 1 (oldest)','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7 (most recent)'];
-  ['lj','green'].forEach(function(site) {
-    var container = document.getElementById('flex-' + site + '-inputs');
-    if (!container) return;
-    days.forEach(function(label, i) {
-      var row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:6px';
-      row.innerHTML = '<label style="font-size:11px;color:#888;min-width:110px">' + label + '</label>' +
-        '<input type="number" id="flex-' + site + '-' + i + '" min="0" max="200" placeholder="--" ' +
-        'style="width:70px;padding:5px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none">';
-      container.appendChild(row);
+function flexIsIncomplete(found, blanks) {
+  return found > 0 && (blanks >= 2 || found < 5);
+}
+
+function flexParseSheet(raw, site) {
+  var teamSet = site === 'green' ? GREEN_TEAMS_LIST : LJ_TEAMS_LIST;
+  var lines = raw.split('\n').map(function(l){ return l.replace(/\r/g,''); }).filter(function(l){ return l.trim() !== ''; });
+  var headerCols = null;
+  for (var li = 0; li < lines.length; li++) {
+    var cells = lines[li].split('\t');
+    var hits = cells.filter(function(c){ return teamSet.indexOf(c.trim().toUpperCase()) >= 0; });
+    if (hits.length >= 3) { headerCols = cells.map(function(c){ return c.trim().toUpperCase(); }); break; }
+  }
+  if (!headerCols) return { error: "Couldn't find the team-name header row. Include the row with team names (e.g. PINK, GREEN, ORANGE...).", days: [] };
+
+  var teamColIdx = [];
+  headerCols.forEach(function(c,i){ if (teamSet.indexOf(c) >= 0) teamColIdx.push(i); });
+
+  var dateRe = /^\d{1,2}\/\d{1,2}\/\d{2,4}$/;
+  var dowNames = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  var days = [];
+
+  lines.forEach(function(line) {
+    var cells = line.split('\t');
+    var d = (cells[0] || '').trim();
+    if (!dateRe.test(d)) return;
+    var parts = d.split('/');
+    var mm = parts[0], dd = parts[1], yyRaw = parts[2];
+    var yy = +(yyRaw.length === 2 ? '20' + yyRaw : yyRaw);
+    var dow = dowNames[new Date(yy, +mm - 1, +dd).getDay()];
+    var census = 0, found = 0, blanks = 0;
+    teamColIdx.forEach(function(ci) {
+      var v = (cells[ci] || '').trim();
+      if (v === '') blanks++;
+      else if (!isNaN(+v)) { census += +v; found++; }
     });
+    if (found === 0) return;
+    days.push({ date: d, dow: dow, census: census, found: found, blanks: blanks, incomplete: flexIsIncomplete(found, blanks) });
   });
-  var blocks = [
-    { id: 'block-motu',   label: 'Mon / Tue',       sub: '',                  days: ['Mon','Tue'],       active: true  },
-    { id: 'block-wethfr', label: 'Wed / Thu / Fri',  sub: 'high admit volume', days: ['Wed','Thu','Fri'], active: false },
-    { id: 'block-sasu',   label: 'Sat / Sun',        sub: '',                  days: ['Sat','Sun'],       active: false },
-  ];
-  flexBlocks = blocks;
-  var dowBtns = document.getElementById('flex-dow-btns');
-  if (!dowBtns) return;
-  dowBtns.innerHTML = '';
-  blocks.forEach(function(block) {
-    var btn = document.createElement('button');
-    btn.id = block.id;
-    btn.innerHTML = '<strong>' + block.label + '</strong>' + (block.sub ? '<br><span style="font-size:10px;opacity:0.65">' + block.sub + '</span>' : '');
-    btn.style.cssText = 'padding:8px 16px;border-radius:8px;border:1px solid ' +
-      (block.active?'#1a56db':'#ddd') + ';background:' + (block.active?'#e8f0fe':'#fff') + ';color:' +
-      (block.active?'#1a56db':'#888') + ';font-size:12px;font-family:inherit;cursor:pointer;text-align:left;' +
-      'font-weight:' + (block.active?'600':'400');
-    btn.onclick = (function(b){ return function(){ flexToggleBlock(b.id); }; })(block);
-    dowBtns.appendChild(btn);
-  });
+  return { error: null, days: days };
 }
 
-function flexRequiredAtTarget(census, residentsHere) {
-  var teachingAbsorb = residentsHere ? 59 : 0;
-  var teachingTeams  = residentsHere ? 4  : 0;
-  var specialty = 14;
-  return 1 + teachingTeams + (census - specialty - teachingAbsorb) / 12.5;
+// Recency-weighted average: last day 4x, 2nd-last 3x, rest 1x
+function flexWeightedAvg(arr) {
+  if (!arr.length) return 0;
+  var num = 0, den = 0;
+  arr.forEach(function(v, i) {
+    var w = i === arr.length - 1 ? 4 : i === arr.length - 2 ? 3 : 1;
+    num += v * w; den += w;
+  });
+  return num / den;
 }
 
-function flexStats(arr) {
-  if (!arr.length) return { avg: null, trend: 0, n: 0 };
-  var avg = arr.reduce(function(a,b){ return a+b; }, 0) / arr.length;
-  if (arr.length < 4) return { avg: avg, trend: 0, n: arr.length };
-  var h  = Math.floor(arr.length / 2);
-  var om = arr.slice(0, h).reduce(function(a,b){ return a+b; }, 0) / h;
-  var nm = arr.slice(-h).reduce(function(a,b){ return a+b; }, 0) / h;
-  return { avg: avg, trend: nm - om, n: arr.length };
+function flexTrend(arr) {
+  if (arr.length < 4) return 0;
+  var h = Math.floor(arr.length / 2);
+  var o = arr.slice(0, h).reduce(function(a,b){ return a+b; }, 0) / h;
+  var n = arr.slice(-h).reduce(function(a,b){ return a+b; }, 0) / h;
+  return n - o;
+}
+
+// Core decision: one site, self-contained.
+// base = staffing WITHOUT flex; flex adds one team.
+function flexDecideSite(name, censusArr, base, isGreen, riskBlockSelected) {
+  if (!censusArr.length) return { name: name, err: 'No census data entered' };
+  var adjF  = isGreen ? GREEN_ADJ : 1;
+  var adj   = censusArr.map(function(c){ return c * adjF; });
+  var level = flexWeightedAvg(adj);
+  var tr    = flexTrend(adj);
+  var perTeam = level / base;
+  var rising  = tr >= 3;
+  var flexOn, reason;
+
+  if (perTeam > MAX_PER_TEAM) {
+    flexOn = true;
+    reason = 'At base ' + base + ' teams the load is ' + perTeam.toFixed(1) + '/team — over max. Add flex.';
+  } else if (perTeam > TARGET_PER_TEAM) {
+    if (rising || riskBlockSelected) {
+      flexOn = true;
+      reason = 'Load ' + perTeam.toFixed(1) + '/team (above target). ' +
+               (rising ? 'Rising. ' : '') +
+               (riskBlockSelected ? 'High-risk block selected (Wed/Thu/Fri — post-spike admits). ' : '') +
+               'Add flex.';
+    } else {
+      flexOn = false;
+      reason = 'Load ' + perTeam.toFixed(1) + '/team — above target but flat/falling on a low-risk block. Stay at base.';
+    }
+  } else {
+    if (rising) {
+      flexOn = true;
+      reason = 'Load ' + perTeam.toFixed(1) + '/team within target now, but census rising — add flex to stay ahead.';
+    } else {
+      flexOn = false;
+      reason = 'Load ' + perTeam.toFixed(1) + '/team at base — within target, not rising. Flex off.';
+    }
+  }
+  return { name: name, level: level, perTeam: perTeam, tr: tr, rising: rising,
+           flexOn: flexOn, reason: reason, adjF: adjF, rawRecent: censusArr[censusArr.length-1],
+           isGreen: isGreen, base: base };
 }
 
 function flexRun() {
   var resultDiv = document.getElementById('flex-result');
-  var ljRes     = document.getElementById('flex-lj-residents').value;
-  var residents = (ljRes === 'yes') ? 'lj' : 'green';
-  var ljTeams   = parseInt(document.getElementById('flex-lj-teams').value)    || 7;
-  var grTeams   = parseInt(document.getElementById('flex-green-teams').value) || 6;
 
-  var ljVals = [], grVals = [];
-  if (flexMode === 'manual') {
-    for (var i = 0; i < 7; i++) {
-      var le = document.getElementById('flex-lj-' + i);
-      var ge = document.getElementById('flex-green-' + i);
-      if (le) { var lv = le.value.trim(); if (lv !== '' && !isNaN(+lv)) ljVals.push(+lv); }
-      if (ge) { var gv = ge.value.trim(); if (gv !== '' && !isNaN(+gv)) grVals.push(+gv); }
-    }
-  } else {
+  // Determine risk block selection
+  var riskBlockSelected = false;
+  flexBlocks2.forEach(function(b) { if (b.active && BLOCK_RISK[b.key]) riskBlockSelected = true; });
+
+  // Get census arrays
+  var ljBase = parseInt(document.getElementById('flex-lj-teams').value) || 7;
+  var grBase = parseInt(document.getElementById('flex-green-teams').value) || 7;
+
+  var ljCensus = [], grCensus = [];
+  if (flexMode === 'paste') {
     var parsePaste = function(str) {
       return str.split(/[,\s]+/).map(function(s){ return s.trim(); })
         .filter(function(s){ return s !== '' && !isNaN(+s); }).map(Number);
     };
     var lp = document.getElementById('flex-lj-paste');
     var gp = document.getElementById('flex-green-paste');
-    if (lp) ljVals = parsePaste(lp.value);
-    if (gp) grVals = parsePaste(gp.value);
+    if (lp) ljCensus = parsePaste(lp.value);
+    if (gp) grCensus = parsePaste(gp.value);
+  } else if (flexMode === 'sheet') {
+    // Use parsed sheet data
+    if (flexLJParsed && !flexLJParsed.error) {
+      ljCensus = flexLJParsed.days.filter(function(d){ return !d.incomplete; }).map(function(d){ return d.census; });
+    }
+    if (flexGRParsed && !flexGRParsed.error) {
+      grCensus = flexGRParsed.days.filter(function(d){ return !d.incomplete; }).map(function(d){ return d.census; });
+    }
+  } else {
+    // Manual
+    for (var i = 0; i < 7; i++) {
+      var le = document.getElementById('flex-lj-' + i);
+      var ge = document.getElementById('flex-green-' + i);
+      if (le) { var lv = le.value.trim(); if (lv && !isNaN(+lv)) ljCensus.push(+lv); }
+      if (ge) { var gv = ge.value.trim(); if (gv && !isNaN(+gv)) grCensus.push(+gv); }
+    }
   }
 
-  if (ljVals.length < 3 && grVals.length < 3) {
-    resultDiv.innerHTML = '<div class="res warn"><h3>Not enough data</h3><p>Enter at least 3 days of census for each site.</p></div>';
+  if (!ljCensus.length && !grCensus.length) {
+    resultDiv.innerHTML = '<div class="res warn"><h3>No data entered</h3><p>Enter census for at least one site.</p></div>';
     return;
   }
 
-  var swingSite = residents === 'lj' ? 'green' : 'lj';
+  var ljResult = flexDecideSite('La Jolla', ljCensus, ljBase, false, riskBlockSelected);
+  var grResult = flexDecideSite('Scripps Green', grCensus, grBase, true, riskBlockSelected);
+
   var html = '';
 
-  var sites = [
-    { key: 'lj',    name: 'La Jolla',     color: '#1a3a7a', vals: ljVals, teams: ljTeams },
-    { key: 'green', name: 'Scripps Green', color: '#1b5e20', vals: grVals, teams: grTeams },
-  ];
-
-  sites.forEach(function(site) {
-    var vals      = site.vals;
-    var baseTeams = site.teams;
-    if (vals.length < 3) {
-      html += '<div class="res warn" style="margin-bottom:10px"><h3>' + site.name + '</h3><p>Not enough data &mdash; enter at least 3 days.</p></div>';
+  [ljResult, grResult].forEach(function(r) {
+    if (r.err) {
+      html += '<div class="res info" style="margin-bottom:10px"><h3>' + r.name + '</h3><p>' + r.err + '</p></div>';
       return;
     }
-    var residentsHere = (site.key === residents);
-    var thisIsSwing   = (site.key === swingSite);
-    var s      = flexStats(vals);
-    var recent = vals[vals.length - 1];
-    var req    = flexRequiredAtTarget(recent, residentsHere);
-    var gap    = req - baseTeams;
-    var rising = s.trend >= 3;
-    var activeBlocks = flexBlocks.filter(function(b){ return b.active; });
-    var activeDays   = activeBlocks.reduce(function(acc,b){ return acc.concat(b.days); }, []);
-    var hr = thisIsSwing ? activeDays.filter(function(d){ return HIGH_RISK.indexOf(d) >= 0; }) : [];
-
-    var rec, note, tone;
-    if (gap >= 0.6) {
-      rec  = 'Flex ON';
-      note = 'Needs ' + req.toFixed(1) + ' teams at target vs ' + baseTeams + ' staffed &mdash; short ' + gap.toFixed(1) + '.' +
-             (rising ? ' Census is rising.' : '') + (hr.length ? ' Mon/Tue block carries elevated admit risk.' : '');
-      tone = 'yes';
-    } else if (gap < 0.6 && hr.length) {
-      rec  = 'Hold &mdash; Flex ON for Mon/Tue';
-      note = 'Census is soft overall but Mon/Tue carry elevated admit risk. Consider flex off for Wed&ndash;Fri and Sat/Sun blocks only.';
-      tone = 'warn';
-    } else if (gap < 0.6 && rising) {
-      rec  = 'Caution &mdash; census rising';
-      note = 'Average within target but trending up. Flex-off now risks being short by mid-week.';
-      tone = 'warn';
-    } else if (gap >= 0.25) {
-      rec  = 'Marginal &mdash; consider split week';
-      note = 'Gap ' + gap.toFixed(1) + '. Low-risk blocks (Wed&ndash;Fri, Sat/Sun) may be sufficient.';
-      tone = 'info';
-    } else {
-      rec  = 'Flex OFF';
-      note = 'Census within target, not rising, no high-risk blocks selected.';
-      tone = 'no';
-    }
-
-    var trendLabel = s.trend >= 3 ? '↑ rising' : s.trend <= -3 ? '↓ falling' : '→ flat';
-    html += '<div style="margin-bottom:14px">' +
-      '<div style="font-size:13px;font-weight:600;color:' + site.color + ';margin-bottom:6px">' + site.name + '</div>' +
+    var loadColor = r.perTeam > MAX_PER_TEAM ? '#b71c1c' : r.perTeam > TARGET_PER_TEAM ? '#78350f' : '#1b5e20';
+    var trendLabel = r.tr >= 3 ? '\u2191 rising' : r.tr <= -3 ? '\u2193 falling' : '\u2192 flat';
+    var tone = r.flexOn ? 'warn' : 'yes';
+    html += '<div style="margin-bottom:12px">' +
+      '<div style="font-size:13px;font-weight:600;margin-bottom:6px">' + r.name + '</div>' +
       '<div class="res info" style="margin-bottom:6px"><p>' +
-      'Avg ' + s.avg.toFixed(0) + ' &middot; ' + trendLabel + ' &middot; ' + vals.length + ' days &middot; Most recent: ' + recent + '<br>' +
-      'Required: ' + req.toFixed(1) + ' teams &middot; Staffed: ' + baseTeams + ' &middot; Gap: ' + (gap > 0 ? '+' : '') + gap.toFixed(1) +
+      '<span style="font-size:18px;font-weight:700;color:' + loadColor + '">' + r.perTeam.toFixed(1) + ' /team</span>' +
+      '&nbsp;&nbsp;at base ' + r.base + ' teams &middot; weighted avg ' + r.level.toFixed(0) + ' &middot; ' + trendLabel +
+      (r.isGreen ? ' &middot; ortho adj &times;' + r.adjF.toFixed(2) + ' (raw most recent: ' + r.rawRecent + ')' : '') +
       '</p></div>' +
-      '<div class="res ' + tone + '"><p style="font-size:18px;font-weight:700;margin-bottom:6px">' + rec + '</p>' +
-      '<p>' + note + '</p></div></div>';
+      '<div class="res ' + tone + '">' +
+      '<p style="font-size:18px;font-weight:700;margin-bottom:6px">' + (r.flexOn ? 'FLEX ON \u2192 ' + r.name + ' (to ' + (r.base+1) + ' teams)' : 'Flex OFF \u2014 stay at ' + r.base) + '</p>' +
+      '<p>' + r.reason + '</p></div></div>';
   });
+
+  // Both-on warning
+  if (ljResult.flexOn && grResult.flexOn && !ljResult.err && !grResult.err) {
+    html += '<div class="res no">' +
+      '<h3>\u26a0 Both sites need Flex ON</h3>' +
+      '<p>Manpower cannot move between sites. You need a second flex/surge position, or one site goes uncovered.</p>' +
+      '</div>';
+  }
 
   resultDiv.innerHTML = html;
   resultDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+// Sheet parsing mode - parse button handler
+function flexParseAndShow(site) {
+  var rawEl  = document.getElementById('flex-' + site + '-sheet');
+  var revDiv = document.getElementById('flex-' + site + '-review');
+  if (!rawEl || !revDiv) return;
+  var parsed = flexParseSheet(rawEl.value, site);
+  if (site === 'lj') flexLJParsed = parsed;
+  else flexGRParsed = parsed;
+
+  if (parsed.error) {
+    revDiv.innerHTML = '<div class="res no" style="margin-top:6px"><p>' + parsed.error + '</p></div>';
+    return;
+  }
+
+  var html = '<div class="nbox" style="margin-top:6px;max-height:200px;overflow-y:auto">' +
+    '<div style="font-size:11px;color:#888;margin-bottom:4px">\u26a0 = auto-flagged incomplete (excluded). Toggle to override.</div>';
+  parsed.days.forEach(function(d, i) {
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:3px 0;border-bottom:1px solid #f0f0ee;opacity:' + (d.incomplete?'0.5':'1') + ';font-size:12px">' +
+      '<span style="width:72px">' + d.date + '</span>' +
+      '<span style="width:32px;color:#888">' + d.dow + '</span>' +
+      '<span style="width:72px">census ' + d.census + '</span>' +
+      '<span style="flex:1;color:#aaa">' + d.found + ' teams' + (d.blanks ? ', ' + d.blanks + ' blank' : '') + '</span>' +
+      '<label style="font-size:11px;cursor:pointer"><input type="checkbox" ' + (d.incomplete?'checked':'') + ' onchange="flexToggleDay(\'' + site + '\',' + i + ',this.checked)"> incomplete</label>' +
+      '</div>';
+  });
+  html += '</div>';
+  revDiv.innerHTML = html;
+}
+
+function flexToggleDay(site, i, checked) {
+  var parsed = site === 'lj' ? flexLJParsed : flexGRParsed;
+  if (!parsed || !parsed.days[i]) return;
+  parsed.days[i].incomplete = checked;
 }
 
 </script>
