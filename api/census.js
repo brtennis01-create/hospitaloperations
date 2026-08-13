@@ -1,37 +1,41 @@
 export default async function handler(req, res) {
-  const redisUrl = process.env.REDIS_URL;
-  if (!redisUrl) return res.status(500).json({ error: 'REDIS_URL not configured' });
+  let restBase = process.env.UPSTASH_REDIS_REST_URL;
+  let token    = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  let restBase, token;
-  try {
-    const u = new URL(redisUrl);
-    restBase = `https://${u.hostname}`;
-    token = u.password;
-  } catch(e) {
-    return res.status(500).json({ error: 'Cannot parse REDIS_URL' });
+  if (!restBase || !token) {
+    const redisUrl = process.env.REDIS_URL;
+    if (!redisUrl) return res.status(500).json({ error: 'No Redis credentials found' });
+    try {
+      const u = new URL(redisUrl);
+      restBase = `https://${u.hostname}`;
+      token = u.password;
+    } catch(e) {
+      return res.status(500).json({ error: 'Cannot parse REDIS_URL: ' + e.message });
+    }
   }
 
   const KEY = 'flex_census';
 
-  async function redisCmd(cmd) {
-    const r = await fetch(`${restBase}/${cmd}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    return r.json();
-  }
+  try {
+    if (req.method === 'GET') {
+      const r = await fetch(`${restBase}/get/${KEY}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const d = await r.json();
+      if (!d.result) return res.status(200).json({ data: null });
+      return res.status(200).json({ data: JSON.parse(decodeURIComponent(d.result)) });
+    }
 
-  if (req.method === 'GET') {
-    const result = await redisCmd(`GET/${KEY}`);
-    if (!result.result) return res.status(200).json({ data: null });
-    try { return res.status(200).json({ data: JSON.parse(decodeURIComponent(result.result)) }); }
-    catch(e) { return res.status(200).json({ data: null }); }
-  }
+    if (req.method === 'POST') {
+      const encoded = encodeURIComponent(JSON.stringify(req.body));
+      await fetch(`${restBase}/set/${KEY}/${encoded}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      return res.status(200).json({ ok: true });
+    }
 
-  if (req.method === 'POST') {
-    const encoded = encodeURIComponent(JSON.stringify(req.body));
-    await redisCmd(`SET/${KEY}/${encoded}`);
-    return res.status(200).json({ ok: true });
+    return res.status(405).json({ error: 'Method not allowed' });
+  } catch(e) {
+    return res.status(500).json({ error: e.message, restBase: restBase });
   }
-
-  return res.status(405).json({ error: 'Method not allowed' });
 }
