@@ -2333,11 +2333,13 @@ var LJ_TEAMS_LIST    = ["PLATINUM","PURPLE","YELLOW","COPPER","BRONZE","AMBER","
 
 // Wed/Thu/Fri is the high-risk flex-off block
 var BLOCK_RISK = { "Mon/Tue": false, "Wed/Thu/Fri": true, "Sat/Sun": false };
+var flexMode     = 'manual';
+var flexInited   = false;
+var flexLJParsed = null;
+var flexGRParsed = null;
 
 var flexBlocks2    = [];
-var flexInited     = false;
-var flexLJParsed   = null;
-var flexGRParsed   = null;
+
 
 function flexSetMode(mode) {
   flexMode = mode;
