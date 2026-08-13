@@ -1,17 +1,13 @@
 export default async function handler(req, res) {
-  let restBase = process.env.UPSTASH_REDIS_REST_URL;
-  let token    = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const restBase = process.env.UPSTASH_REDIS_REST_URL;
+  const token    = process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (!restBase || !token) {
-    const redisUrl = process.env.REDIS_URL;
-    if (!redisUrl) return res.status(500).json({ error: 'No Redis credentials found' });
-    try {
-      const u = new URL(redisUrl);
-      restBase = `https://${u.hostname}`;
-      token = u.password;
-    } catch(e) {
-      return res.status(500).json({ error: 'Cannot parse REDIS_URL: ' + e.message });
-    }
+    return res.status(500).json({ 
+      error: 'Missing credentials',
+      hasUrl: !!restBase,
+      hasToken: !!token
+    });
   }
 
   const KEY = 'flex_census';
@@ -36,6 +32,6 @@ export default async function handler(req, res) {
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch(e) {
-    return res.status(500).json({ error: e.message, restBase: restBase });
+    return res.status(500).json({ error: e.message });
   }
 }
