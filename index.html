@@ -2354,6 +2354,7 @@ function flexSetMode(mode) {
 function initFlex() {
   if (flexInited) return;
   flexInited = true;
+
   // Build 7 number input rows for each site
   var days = ['Day 1 (oldest)','Day 2','Day 3','Day 4','Day 5','Day 6','Day 7 (most recent)'];
   ['lj','green'].forEach(function(site) {
@@ -2368,7 +2369,123 @@ function initFlex() {
       container.appendChild(row);
     });
   });
+
+  // Load saved census data from localStorage and shift if it's a new day
+  flexLoadSaved();
   buildFlexBlocks();
+
+  // Add shift-forward button below inputs
+  var scroll = document.getElementById('flex-scroll');
+  var shiftNote = document.createElement('div');
+  shiftNote.style.cssText = 'font-size:11px;color:#888;margin:-8px 0 12px;display:flex;align-items:center;gap:10px';
+  shiftNote.innerHTML = '<span id="flex-last-saved"></span>' +
+    '<button onclick="flexShiftAndClear()" style="font-size:11px;padding:3px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;color:#666">New day &rarr; shift numbers down</button>' +
+    '<button onclick="flexClearAll()" style="font-size:11px;padding:3px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;color:#c00">Clear all</button>';
+  var manualDiv = document.getElementById('flex-manual-mode');
+  if (manualDiv) manualDiv.appendChild(shiftNote);
+}
+
+function flexSaveData() {
+  var data = { lj: [], green: [], date: new Date().toDateString() };
+  for (var i = 0; i < 7; i++) {
+    var le = document.getElementById('flex-lj-' + i);
+    var ge = document.getElementById('flex-green-' + i);
+    data.lj.push(le && le.value.trim() !== '' ? le.value : '');
+    data.green.push(ge && ge.value.trim() !== '' ? ge.value : '');
+  }
+  // Save to server (shared across all devices) with localStorage fallback
+  fetch('/api/census', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).catch(function() {
+    try { localStorage.setItem('flex_census', JSON.stringify(data)); } catch(e) {}
+  });
+  try { localStorage.setItem('flex_census', JSON.stringify(data)); } catch(e) {}
+}
+
+function flexLoadSaved() {
+  var savedLabel = document.getElementById('flex-last-saved');
+  if (savedLabel) savedLabel.textContent = 'Loading saved data…';
+  // Try server first, fall back to localStorage
+  fetch('/api/census')
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      var data = res.data;
+      if (!data) {
+        // Try localStorage fallback
+        try {
+          var raw = localStorage.getItem('flex_census');
+          if (raw) data = JSON.parse(raw);
+        } catch(e) {}
+      }
+      if (!data) {
+        if (savedLabel) savedLabel.textContent = 'No saved data yet — enter census below';
+        return;
+      }
+      if (savedLabel && data.date) savedLabel.textContent = 'Last saved: ' + data.date;
+      ['lj','green'].forEach(function(site) {
+        var arr = data[site] || [];
+        arr.forEach(function(val, i) {
+          var el = document.getElementById('flex-' + site + '-' + i);
+          if (el && val !== '') el.value = val;
+        });
+      });
+    })
+    .catch(function() {
+      // localStorage fallback
+      try {
+        var raw = localStorage.getItem('flex_census');
+        if (!raw) { if (savedLabel) savedLabel.textContent = 'No saved data yet'; return; }
+        var data = JSON.parse(raw);
+        if (savedLabel && data.date) savedLabel.textContent = 'Last saved: ' + data.date + ' (local)';
+        ['lj','green'].forEach(function(site) {
+          var arr = data[site] || [];
+          arr.forEach(function(val, i) {
+            var el = document.getElementById('flex-' + site + '-' + i);
+            if (el && val !== '') el.value = val;
+          });
+        });
+      } catch(e) { if (savedLabel) savedLabel.textContent = 'Could not load saved data'; }
+    });
+}
+
+function flexShiftAndClear() {
+  // Shift days 1-6 down (Day 2 becomes Day 1, etc.), clear Day 7 for new entry
+  ['lj','green'].forEach(function(site) {
+    var vals = [];
+    for (var i = 0; i < 7; i++) {
+      var el = document.getElementById('flex-' + site + '-' + i);
+      vals.push(el ? el.value : '');
+    }
+    for (var i = 0; i < 6; i++) {
+      var el = document.getElementById('flex-' + site + '-' + i);
+      if (el) el.value = vals[i + 1];
+    }
+    var last = document.getElementById('flex-' + site + '-6');
+    if (last) last.value = '';
+  });
+  flexSaveData();
+  var savedLabel = document.getElementById('flex-last-saved');
+  if (savedLabel) savedLabel.textContent = 'Shifted ✓ — enter today’s census in Day 7';
+}
+
+function flexClearAll() {
+  ['lj','green'].forEach(function(site) {
+    for (var i = 0; i < 7; i++) {
+      var el = document.getElementById('flex-' + site + '-' + i);
+      if (el) el.value = '';
+    }
+  });
+  // Clear on server and locally
+  fetch('/api/census', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lj: [], green: [], date: null })
+  }).catch(function(){});
+  try { localStorage.removeItem('flex_census'); } catch(e) {}
+  var savedLabel = document.getElementById('flex-last-saved');
+  if (savedLabel) savedLabel.textContent = 'Cleared';
 }
 
 function buildFlexBlocks() {
@@ -2510,6 +2627,8 @@ function flexDecideSite(name, censusArr, base, isGreen, riskBlockSelected) {
 
 function flexRun() {
   var resultDiv = document.getElementById('flex-result');
+  // Save current manual entries to localStorage
+  if (flexMode === 'manual') flexSaveData();
 
   // Determine risk block selection
   var riskBlockSelected = false;
