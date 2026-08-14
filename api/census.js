@@ -23,11 +23,14 @@ export default async function handler(req, res) {
     }
 
     if (req.method === 'POST') {
-      const encoded = encodeURIComponent(JSON.stringify(req.body));
-      await fetch(`${restBase}/set/${KEY}/${encoded}`, {
+      const body = req.body;
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      const encoded = encodeURIComponent(JSON.stringify(body));
+      const r = await fetch(`${restBase}/set/${KEY}/${encoded}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      return res.status(200).json({ ok: true });
+      const d = await r.json();
+      return res.status(200).json({ ok: true, redisResponse: d });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
