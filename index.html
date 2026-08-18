@@ -983,7 +983,7 @@ function opsEngine(q) {
   const has = (...terms) => terms.some(w => t.includes(w));
 
   if (has('shift hour','what time','when start','when does my shift','shift start','shift end') && !has('extension','pay','surge'))
-    return "📋 Shift hours:\n\n🌅 Day shift: 7am–5pm. Stay until at least 3pm. Take secure chats until 9pm.\n\n🌞 PM1 / Swing 1 (Non-teach): 12pm–8pm. Pager call 12–5pm. Last admit 6:30pm.\n\n🌆 PM2 / Swing 2 (Non-teach): 4pm–midnight. Pager call 5–10pm. Last admit 10pm.\n\n🌙 Teach PM: 3pm–11pm. Calls 3–9pm. Cross covers own patients until 11pm.\n\n🌃 Night shift (HS): 9pm–7am. Last admit 6:30am. Pager call: 9pm–7am (teach) / 10pm–7am (non-teach).\n\n⚡ Surge PM: 5–10pm Mon–Fri only.";
+    return "📋 Shift hours:\n\n🌅 Day shift: 7am–5pm. Stay until at least 3pm. Take secure chats until 9pm.\n\n🌞 PM1 / Swing 1 (Non-teach): 12pm–8pm. Pager call 12–5pm. Last admit 6:30pm.\n\n🌆 PM2 / Swing 2 (Non-teach): 4pm–midnight. Pager call 5–10pm. Last admit 10pm.\n\n🌙 Teach PM: 3pm–11pm. Calls 3–9pm. Cross covers own patients until 11pm.\n\n🌃 Night shift (HS): 9pm–7am. Last admit 6:30am. Pager call: 9pm–7am (teach) / 10pm–7am (non-teach).\n\n⚡ Surge PM: 5–10pm Mon–Fri only.\\n\\n📅 Seasonal swing staffing:\\n• Mid-June to mid-Dec (residents at Memorial): Green has 2 swings M–F (PM1+PM2) + 1 on Sat/Sun at 3pm (teach PM rules). Memorial has 1 swing 7 days/week.\\n• Mid-Dec to mid-June (residents at Green): Green has 1 swing 7 days/week. Memorial has 2 swings 7 days/week.";
 
   if ((has('how many patient','max patient','patient cap','maximum','expected to see','expected to admit') || (has('how many') && has('patient','admit'))) && !has('surge'))
     return "📋 Maximum patients per shift:\n\n🌅 Day: Non-teach 12–14 · Resident-only team 13–15 · Full teach team 14–18\n🌞 PM1 / Swing 1: Max 8 admits\n🌆 PM2 / Swing 2: Max 8 admits\n🌙 Teach PM: Max 8 patients\n🌃 Night HS: Max 8 (teach) / 7 (non-teach)\n⚡ Surge day: 10 expected, up to 13 voluntary ($200/pt for 11–13)\n⚡ Surge PM: Min 3, expected 4, max 5";
@@ -1001,7 +1001,16 @@ function opsEngine(q) {
     return "📋 AM patient distribution:\n\n• On-call hospitalist distributes all PM/HS patients to day hospitalists by 7:00 AM.\n• Update attending on each patient's list and add to treatment team.\n• Update Teams daily numbers with total census by 8am.\n• NOT expected to notify others about teaching service admissions.\n\n🦴 Ortho (Green): Karen Yegella distributes Mon–Fri. Each daytime team sees 1 new ortho patient. PM1/PM2 split remainder (max 3 each). Overflow → HS nocturnist.";
 
   if (has('cross cover','crosscover')) {
-    if (has('pm','swing','evening'))
+    if (has('weekend swing','saturday swing','sunday swing','weekend pm','how many swing','how many pm','swing on weekend','swing saturday','swing sunday'))
+    return '📋 Swing shift staffing by season:\\n\\n' +
+      'Mid-June to mid-December (residents at Memorial):\\n' +
+      '• Green: 2 swings Mon–Fri (PM1 noon + PM2 4pm). On Saturday and Sunday: 1 swing starting at 3pm (teach PM rules: calls 3–9pm, cross covers until 11pm, max 8 patients).\\n' +
+      '• Memorial: 1 swing 7 days a week.\\n\\n' +
+      'Mid-December to mid-June (residents at Green):\\n' +
+      '• Green: 1 swing 7 days a week (PM1, noon).\\n' +
+      '• Memorial: 2 swings (PM1 + PM2) 7 days a week.';
+
+  if (has('pm','swing','evening'))
       return "📋 PM shift cross cover:\n\n• Handle issues on your admitted patients until 11pm.\n• After 11pm → nocturnist takes over.\n• Log into Haiku/Secure chat and set availability until 11pm.\n• Nocturnist adds PM hospitalist to secure chats received between 9–11pm.\n• Resident-admitted patients → nocturnist adds night float, not PM hospitalist.";
     if (has('night','hs','nocturnist'))
       return "📋 Night shift cross cover:\n\nRecord all events in To Do column in Epic. Title 'XC'. Place above patient sign out. List chronologically.\n\n✅ Record: afib meds, fluid boluses, hyponatremia management, escalating pain meds, new/changed abx, new imaging.\n❌ Skip: one-time nausea/sleep aid/antipyretics, restraints, hypertension meds, insulin.\n\nMajor events (death, code, STEMI, stroke/seizure): call day hospitalist at 7am AND write Significant Event Note in Epic.";
