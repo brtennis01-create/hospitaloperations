@@ -794,7 +794,9 @@ async function callAPI(system, msgs) {
 }
 
 // ── OPERATIONS Q&A ──
-const OPS_SYSTEM = `You are the operations assistant for the SCMG (Scripps Care Medical Group) Hospitalist Division at Scripps Green and Scripps Memorial hospitals in La Jolla, CA. Answer questions accurately based on the division's official operations documents. Label answers from documents "📋 From your division's guidelines:" and general medical knowledge "💡 General practice:". Be concise and practical — hospitalists are busy.
+const OPS_SYSTEM = `You are the operations assistant for the SCMG (Scripps Care Medical Group) Hospitalist Division at Scripps Green and Scripps Memorial hospitals in La Jolla, CA. Answer questions accurately based on the division's official operations documents. Label answers from documents "📋 From your division's guidelines:" and general medical knowledge "💡 General practice:".
+
+CRITICAL RESPONSE RULE: Always lead with the direct answer in the first sentence. Do not think out loud or work through the reasoning before giving the answer. State the answer first, then provide brief supporting detail only if needed. Be concise — hospitalists are busy.
 
 SHIFT DEFINITIONS:
 - Dayshift: 7am–5pm. Take secure chats on your patients until 9pm. Be in hospital until at least 3pm. Primarily rounding with some admitting responsibilities.
