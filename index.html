@@ -805,7 +805,8 @@ SHIFT DEFINITIONS:
 - Teach PM: 3pm–11pm. Calls for new admissions 3–9pm. Cross covers own patients until 11pm. Max 8 patients.
 - Night shift (HS): 9pm–7am. Admitting and cross cover. Last admit by 6:30am. Max 7 admits at non-teach, 8 at teach.
 - Surge dayshift: Voluntary. $300 standby fee. $1900 weekday / $2100 weekend. See 10 patients (up to 13 voluntary, $200/patient for 11-13).
-- Surge PM (updated 8/3/26): Voluntary. $500 standby fee. Call-in window 5–8pm Mon–Fri. Last admit 9pm, shift ends 10pm. $250/admit. Min 3, expected 4, max 5. Called in at 7pm+: max 3.
+- Surge PM (updated 8/3/26): Voluntary. $500 standby fee. Call-in window 5–8pm Mon–Fri. Last admit 9pm, shift ends 10pm. $250/admit. Min 3, expected 4, max 5. Called in at 7pm+: max 3. PM surge continues as before on Thursday and Friday.
+- Extra PM (pilot starting 8/24/26, Mon–Wed, Memorial only): When a PM surge volunteer is available, their shift is converted to Extra PM — a scheduled second PM at Memorial. Shows as 'Extra PM' on AMION. If no volunteer, PM surge rules apply. Hours: 5pm–12am. No pager call. Receives admits from LJ PM and HS collaboratively. Max 7 admits (more with shift extension). Last admit 11pm. Max 3 admits after 9pm. All work done by midnight. Pay: $2,200.
 - Jeopardy: Assigned ~once/month. Available for day/evening/night coverage if someone is sick. One shift only — cannot cover two shifts same day.
 - Shift extension: Extra pay when you exceed max patient volume. $200/admit after cap.
 
@@ -1003,7 +1004,21 @@ function opsEngine(q) {
     return "📋 Shift extension — $200 per admit after your cap:\n\n🌞 PM shift (both sites): After 8 patients\n🌙 HS night teach: After 8 patients\n🌙 HS night non-teach: After 7 patients\n🌅 Day non-teach: After 2pm if you have already seen 13+ patients\n⚡ Surge: After 10 → $200 per patient for 11, 12, 13 (voluntary, Ericka asks)\n\n📞 Contact Ericka Martin to arrange shift extension.";
 
   if (has('surge pay','standby','how much does surge','surge compensation','surge fee') || (has('$') && has('surge')))
-    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge (updated 8/3/26):\n• Call-in window: 5:00–8:00 PM, Mon–Fri\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n\n📞 Sign up via Ericka Martin.";
+    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge (updated 8/3/26):\n• Call-in window: 5:00–8:00 PM, Mon–Fri\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n\n📞 Sign up via Ericka Martin.\\n\\n🆕 Extra PM (pilot 8/24/26, Mon–Wed at Memorial):\\n• PM surge volunteer converted to a scheduled Extra PM shift\\n• Hours: 5pm–12am · No pager call\\n• Max 7 admits · Last admit 11pm\\n• Pay: $2,200";
+
+  if (has('extra pm','extra shift','second pm','additional pm','8/24','monday extra','tuesday extra','wednesday extra')) {
+    return '🆕 Extra PM shift (pilot starting 8/24/26):\\n\\n' +
+      'When a volunteer is available, PM surge is converted to Extra PM — a scheduled second PM shift at Memorial on Mon/Tue/Wed.\\n\\n' +
+      '• Shows up as Extra PM on AMION. If no volunteer, PM surge rules apply as normal.\\n' +
+      '• Hours: 5pm–12am · No pager call\\n' +
+      '• Receives admits from both LJ PM and HS hospitalist collaboratively\\n' +
+      '• Max 7 admits (more with shift extension pay)\\n' +
+      '• Last admit by 11pm · Max 3 admits after 9pm\\n' +
+      '• All work must be done by midnight\\n' +
+      '• Days: Monday, Tuesday, Wednesday\\n' +
+      '• Pay: $2,200\\n\\n' +
+      'PM surge continues unchanged on Thursday and Friday.';
+  }
 
   if (has('jeopardy'))
     return "📋 Jeopardy:\n\nAssigned approximately once a month. You must be available to cover day, evening, or night shifts if someone calls in sick.\n\n• You will only be called for ONE shift per day — not two shifts in the same day.\n• Check AMION for the jeopardy schedule.\n• Contact Liesbet Joris Quinton (LJQ) if you cannot work a scheduled day.";
@@ -1797,7 +1812,25 @@ function resetPM(){pS={step:0,site:null,time:null};renderPM();}
 function renderPM(){
   const c=document.getElementById('pc');c.innerHTML='';
   if(pS.step===0){
-    c.innerHTML=`<p class="sq">What time are you checking?</p><p class="sd">PM Surge is Monday–Friday only. Call-in window is 5:00 PM – 8:00 PM. Shift ends 10pm, last admit 9pm.</p>
+    // Day-of-week banner
+    const dow = new Date().getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
+    const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
+    const isExtraPMDay = (dow >= 1 && dow <= 3);
+    const isThurFri = (dow === 4 || dow === 5);
+    const isWeekend = (dow === 0 || dow === 6);
+    let extraPMWarning = '';
+    if (isExtraPMDay) {
+      extraPMWarning = `<div class="res warn" style="margin-bottom:12px"><h3>&#x26A0;&#xFE0F; Check AMION for Extra PM first</h3><p>Today is <strong>${dowName}</strong>. Before calling in PM surge, check AMION to see if an <strong>Extra PM shift</strong> is already scheduled at Memorial.\n\nIf Extra PM is staffed, it handles admits from LJ PM and HS collaboratively — PM surge is not needed.\n\nOnly proceed with PM surge below if <strong>no Extra PM volunteer</strong> is showing on AMION today.</p></div>`;
+    } else if (isThurFri) {
+      extraPMWarning = `<div class="res info" style="margin-bottom:12px"><h3>&#x2139;&#xFE0F; No Extra PM today (${dowName})</h3><p>Extra PM is only available Monday–Wednesday. PM surge rules apply as normal today.</p></div>`;
+    } else if (isWeekend) {
+      extraPMWarning = `<div class="res info" style="margin-bottom:12px;background:#f5f5f3;border-color:#ccc"><h3 style="color:#555">Today is ${dowName} — no Extra PM or PM surge available</h3><p style="color:#666">PM surge and Extra PM are weekday-only. Neither is available on weekends.</p></div>`;
+    }
+    if (isWeekend) {
+      c.innerHTML = extraPMWarning;
+      return;
+    }
+    c.innerHTML=extraPMWarning+`<p class="sq">What time are you checking?</p><p class="sd">PM Surge is Monday–Friday only. Call-in window is 5:00 PM – 8:00 PM. Shift ends 10pm, last admit 9pm.</p>
     <button class="obtn" onclick="pS.time='5pm';pS.step=1;renderPM()">At 5:00 PM (on the dot)</button>
     <button class="obtn" onclick="pS.time='after5';pS.step=1;renderPM()">After 5:00 PM but before 8:00 PM</button>
     <button class="obtn" onclick="pmOOW()">After 8:00 PM or before 5:00 PM</button>`;
