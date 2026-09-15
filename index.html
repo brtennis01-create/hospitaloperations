@@ -179,6 +179,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-resident" onclick="show('resident')">
       <svg viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> Resident rules
     </div>
+    <div class="nav-item" id="nav-vac" onclick="show('vac')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg> Vacation requests
+    </div>
     <div class="nav-item" id="nav-help" onclick="show('help')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> How to use
     </div>
@@ -198,6 +201,19 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <div class="main">
+
+    <!-- VACATION REQUESTS -->
+    <div class="panel" id="panel-vac">
+      <div class="ph"><h1>Vacation requests</h1><span class="badge-blue">1/1&ndash;7/31/27 + 2027 holidays</span></div>
+      <div class="rtabs">
+        <button class="rtab active" id="vactab-submit" onclick="switchVacTab('submit')">&#128221; Submit request</button>
+        <button class="rtab" id="vactab-admin" onclick="switchVacTab('admin')">&#128274; Scheduler view</button>
+      </div>
+      <div class="rpane active" id="vacpane-submit"><div class="rpane-scroll" id="vac-submit"></div></div>
+      <div class="rpane" id="vacpane-admin"><div class="rpane-scroll" id="vac-admin"></div></div>
+      <div class="pfoot">Requests are saved centrally and visible to schedulers &middot; Confirm final schedule on Amion</div>
+    </div>
+
 
     <!-- PATIENT ROUTING -->
     <div class="panel" id="panel-route">
@@ -735,7 +751,7 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help','sched','resident','flex'].forEach(n => {
+  ['qa','day','pm','route','onboard','help','sched','resident','flex','vac'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
@@ -744,6 +760,7 @@ function show(name) {
   if (name==='route') renderGuided();
   if (name==='sched') initSchedule();
   if (name==='flex') initFlex();
+  if (name==='vac') initVac();
 }
 
 function switchSchTab(tab) {
@@ -2794,6 +2811,241 @@ function flexToggleDay(site, i, checked) {
   var parsed = site === 'lj' ? flexLJParsed : flexGRParsed;
   if (!parsed || !parsed.days[i]) return;
   parsed.days[i].incomplete = checked;
+}
+
+
+// ===== VACATION REQUESTS =====
+const VAC_ADMIN_CODE = 'sched27';   // <-- CHANGE THIS. Schedulers' code for the "Scheduler view" tab.
+
+const VAC_ROSTER = {
+ 'AK':'Alexander Ko','ASh':'Ashley Shah','ASit':'Alan Sit','AlB':'Alan Beneze',
+ 'CW':'Christopher Walsh','CWh':'Caitlin Whelan','DJ':'Derek Jones','DL':'Darius Leung',
+ 'DM':'Diane McNally','DN':'Dominic Nguyen','DuD':'Duc Do','EF':'Elizabeth Farrell',
+ 'EW':'Enoch Wang','FS':'Farhad Shadan','GG':'Gauri Gadre','Gh':'Gabrielle Horner',
+ 'JB':'Josef Bauer','JCH':'Joshua Cheng','JH':'James Hart','JLe':'Jacklyn Lee',
+ 'JM':'Jordan Martinez','JMi':'Jean Min','KA':'Karima Ali','KB':'Khamisah Barger',
+ 'KPat':'Karna Patel','LD':'Linda Ding','LF':'Liam Flanagan','LJQ':'Liesbet Joris-Quinton',
+ 'LN':'Laura Nicholson','MA':'Mayank Amin','MM':'Michaela Miller','MS':'Matt Stagg',
+ 'MV':'Michael Vu','NH':'Nima Hajazimzanjani','NJ':'Neal Jones','NK':'Neil Kalra',
+ 'NS':'Natasha Surette','OJa':'Ola Jandali','RTi':'Robert Tickes','RY':'Roger Yu',
+ 'SJ':'Stuti Jaiswal','SK':'Shari Krevitz','SKu':'Samuel Kung','TM':'Thomas McCarthy',
+ 'V S':'Victor Stewart','VC':'Virginia Chan','XL':'Xiaoli Liu'
+};
+const VAC_PROVIDERS = Object.keys(VAC_ROSTER).sort((a,b)=>VAC_ROSTER[a].localeCompare(VAC_ROSTER[b]));
+function vacProviderName(p){ return VAC_ROSTER[p] || p; }
+
+const VAC_CFG = {
+  windowStart:'2027-01-01', windowEnd:'2027-07-31', maxBlockDays:14,
+  holidays:{
+    sb1:{label:'Spring Break \u2014 Week 1 (3/29\u20134/4)',start:'2027-03-29',end:'2027-04-04',spring:true},
+    sb2:{label:'Spring Break \u2014 Week 2 (4/5\u20134/11)',start:'2027-04-05',end:'2027-04-11',spring:true},
+    thanksgiving:{label:'Thanksgiving (11/22\u201311/28)',start:'2027-11-22',end:'2027-11-28'},
+    christmas:{label:'Christmas \u2014 week of 12/20 (12/20\u201312/26)',start:'2027-12-20',end:'2027-12-26',december:true},
+    newyear:{label:"New Year's \u2014 week of 12/27 (12/27\u20131/2)",start:'2027-12-27',end:'2028-01-02',december:true}
+  }
+};
+
+let vacInited=false, vacAdminUnlocked=false;
+function initVac(){ switchVacTab('submit'); if(!vacInited){ vacInited=true; renderVacForm(); } }
+function switchVacTab(tab){
+  ['submit','admin'].forEach(t=>{
+    document.getElementById('vactab-'+t).className='rtab'+(t===tab?' active':'');
+    document.getElementById('vacpane-'+t).className='rpane'+(t===tab?' active':'');
+  });
+  if(tab==='admin') renderVacAdmin();
+}
+function vDays(s,e){ return Math.round((new Date(e+'T12:00:00')-new Date(s+'T12:00:00'))/86400000)+1; }
+function vOverlap(s1,e1,s2,e2){ return s1<=e2 && s2<=e1; }
+function vFmt(d){ if(!d) return ''; const p=d.split('-'); return p[1]+'/'+p[2]+'/'+p[0].slice(2); }
+function vacHolidayLabel(k){ return k&&VAC_CFG.holidays[k]?VAC_CFG.holidays[k].label:'\u2014'; }
+
+function renderVacForm(){
+  const c=document.getElementById('vac-submit');
+  const ws=VAC_CFG.windowStart, we=VAC_CFG.windowEnd;
+  let holidayOpts='<label class="crow" style="margin-bottom:6px"><input type="radio" name="vac-holiday" value="none" checked> None / not requesting a holiday</label>';
+  Object.keys(VAC_CFG.holidays).forEach(k=>{ holidayOpts+='<label class="crow" style="margin-bottom:6px"><input type="radio" name="vac-holiday" value="'+k+'"> '+VAC_CFG.holidays[k].label+'</label>'; });
+  c.innerHTML=
+    '<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udcdd Requests for 1/1/27 \u2013 7/31/27 + 2027 holidays</h3>'
+    +'<p>You may request up to <strong>2 vacation blocks</strong> (Jan 1 \u2013 Jul 31) plus <strong>one holiday week</strong>. Blocks over 2 weeks need scheduling approval. If a block includes spring break, it counts as your holiday request. You can only pick one late-December week (Christmas <em>or</em> New Year\u2019s).</p></div>'
+    +'<div class="sq">Your name</div>'
+    +'<div class="nr"><label>Provider</label><select id="vac-provider" onchange="vacLoadExisting()" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none"><option value="">Select your name\u2026</option></select></div>'
+    +'<div class="sq" style="margin-top:16px">Vacation block 1 (Jan 1 \u2013 Jul 31)</div>'
+    +'<div class="nr"><label>Start</label><input type="date" id="vac-b1s" min="'+ws+'" max="'+we+'" onchange="vacValidateLive()"></div>'
+    +'<div class="nr"><label>End</label><input type="date" id="vac-b1e" min="'+ws+'" max="'+we+'" onchange="vacValidateLive()"></div>'
+    +'<div class="sq" style="margin-top:14px">Vacation block 2 (optional)</div>'
+    +'<div class="nr"><label>Start</label><input type="date" id="vac-b2s" min="'+ws+'" max="'+we+'" onchange="vacValidateLive()"></div>'
+    +'<div class="nr"><label>End</label><input type="date" id="vac-b2e" min="'+ws+'" max="'+we+'" onchange="vacValidateLive()"></div>'
+    +'<div class="sq" style="margin-top:16px">Holiday request (choose one)</div>'
+    +'<div class="sd">If a block above includes spring break, that becomes your holiday automatically and this selection is ignored.</div>'
+    +'<div id="vac-holiday-opts">'+holidayOpts+'</div>'
+    +'<div class="sq" style="margin-top:12px">Were you off for Christmas 2026?</div>'
+    +'<div class="sd">Schedulers use this \u2014 if you were off Christmas 2026, you\u2019re expected to work Christmas 2027.</div>'
+    +'<div style="display:flex;gap:16px;margin-bottom:8px"><label class="crow" style="margin:0"><input type="radio" name="vac-xmas26" value="no" checked> No</label><label class="crow" style="margin:0"><input type="radio" name="vac-xmas26" value="yes"> Yes</label></div>'
+    +'<div class="sq" style="margin-top:12px">Notes for schedulers (optional)</div>'
+    +'<textarea id="vac-notes" rows="2" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:none;outline:none;margin-bottom:12px" placeholder="e.g. flexible on which spring break week"></textarea>'
+    +'<div id="vac-live"></div>'
+    +'<button class="ft-btn" onclick="vacSubmit()">\u2192 Submit request</button>'
+    +'<div id="vac-submit-result" style="margin-top:12px"></div>';
+  const sel=document.getElementById('vac-provider');
+  VAC_PROVIDERS.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=vacProviderName(p)+' ('+p+')'; sel.appendChild(o); });
+}
+
+function vacGather(){
+  const g=id=>{const el=document.getElementById(id); return el?el.value.trim():'';};
+  const blocks=[];
+  [['vac-b1s','vac-b1e'],['vac-b2s','vac-b2e']].forEach(pair=>{ const s=g(pair[0]),e=g(pair[1]); if(s||e) blocks.push({start:s,end:e}); });
+  const holEl=document.querySelector('input[name="vac-holiday"]:checked');
+  const x26El=document.querySelector('input[name="vac-xmas26"]:checked');
+  return {provider:g('vac-provider'),blocks,holidaySel:holEl?holEl.value:'none',xmas2026off:x26El?x26El.value==='yes':false,notes:g('vac-notes')};
+}
+
+function vacValidate(data){
+  const errors=[],warnings=[],H=VAC_CFG.holidays,finalBlocks=[];
+  let springHit=null;
+  data.blocks.forEach((b,i)=>{
+    const n=i+1;
+    if(!b.start||!b.end){errors.push('Block '+n+': enter both a start and end date.');return;}
+    if(b.end<b.start){errors.push('Block '+n+': end date is before the start date.');return;}
+    if(b.start<VAC_CFG.windowStart||b.end>VAC_CFG.windowEnd) errors.push('Block '+n+' must fall within '+vFmt(VAC_CFG.windowStart)+' \u2013 '+vFmt(VAC_CFG.windowEnd)+'.');
+    const days=vDays(b.start,b.end),approval=days>VAC_CFG.maxBlockDays;
+    if(approval) warnings.push('Block '+n+' is '+days+' days (over 2 weeks) \u2014 requires scheduling approval.');
+    let spring=null;
+    if(vOverlap(b.start,b.end,H.sb1.start,H.sb1.end)) spring='sb1';
+    else if(vOverlap(b.start,b.end,H.sb2.start,H.sb2.end)) spring='sb2';
+    if(spring) springHit=spring;
+    finalBlocks.push({start:b.start,end:b.end,days,approval,spring});
+  });
+  let holiday=null,holidaySource=null;
+  if(springHit){
+    holiday=springHit; holidaySource='via-block';
+    if(data.holidaySel!=='none'&&data.holidaySel!==springHit) warnings.push('A block includes spring break, so '+H[springHit].label+' is your holiday. The separately selected holiday ('+(H[data.holidaySel]?H[data.holidaySel].label:data.holidaySel)+') was ignored.');
+  } else if(data.holidaySel!=='none'){ holiday=data.holidaySel; holidaySource='selected'; }
+  if(finalBlocks.length===0&&!holiday) errors.push('Nothing to submit \u2014 enter at least one vacation block or a holiday request.');
+  if(!data.provider) errors.push('Select your name.');
+  return {errors,warnings,finalBlocks,holiday,holidaySource};
+}
+
+function vacValidateLive(){
+  const v=vacValidate(vacGather()),box=document.getElementById('vac-live');
+  if(!box) return;
+  let html='';
+  if(v.errors.length) html+='<div class="res no" style="margin-bottom:8px"><h3>Please fix:</h3><p>'+v.errors.map(e=>'\u2022 '+e).join('\n')+'</p></div>';
+  if(v.warnings.length) html+='<div class="res warn" style="margin-bottom:8px"><h3>Heads up:</h3><p>'+v.warnings.map(w=>'\u2022 '+w).join('\n')+'</p></div>';
+  box.innerHTML=html;
+}
+
+function vacSubmit(){
+  const data=vacGather(),v=vacValidate(data),out=document.getElementById('vac-submit-result');
+  if(v.errors.length){ out.innerHTML='<div class="res no"><h3>\u2717 Not submitted</h3><p>'+v.errors.map(e=>'\u2022 '+e).join('\n')+'</p></div>'; return; }
+  const entry={provider:data.provider,name:vacProviderName(data.provider),blocks:v.finalBlocks,holiday:v.holiday,holidaySource:v.holidaySource,xmas2026off:data.xmas2026off,notes:data.notes,submitted:new Date().toISOString()};
+  out.innerHTML='<div class="ft-no-match" style="color:#1a56db">Saving\u2026</div>';
+  fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:entry.provider, entry})})
+    .then(r=>r.json()).then(res=>{
+      if(res&&res.ok){
+        let msg='<div class="res yes"><h3>\u2713 Request submitted</h3><p>Thanks, '+entry.name+'. Your request is saved and visible to the schedulers. You can come back and edit it any time.</p></div>';
+        if(v.warnings.length) msg+='<div class="res warn" style="margin-top:8px"><h3>Noted for scheduling review</h3><p>'+v.warnings.map(w=>'\u2022 '+w).join('\n')+'</p></div>';
+        out.innerHTML=msg;
+      } else throw new Error((res&&res.error)||'unknown error');
+    }).catch(e=>{ out.innerHTML='<div class="res no"><h3>\u2717 Could not save</h3><p>Your request was NOT saved ('+e.message+'). Check your connection and try again.</p></div>'; });
+}
+
+function vacLoadExisting(){
+  const p=document.getElementById('vac-provider').value;
+  if(!p) return;
+  fetch('/api/requests').then(r=>r.json()).then(res=>{
+    const all=(res&&res.data)||{}, e=all[p];
+    ['vac-b1s','vac-b1e','vac-b2s','vac-b2e'].forEach(id=>{const el=document.getElementById(id); if(el) el.value='';});
+    document.getElementById('vac-notes').value='';
+    document.querySelector('input[name="vac-holiday"][value="none"]').checked=true;
+    document.querySelector('input[name="vac-xmas26"][value="no"]').checked=true;
+    const rslt=document.getElementById('vac-submit-result'); if(rslt) rslt.innerHTML='';
+    if(!e){ vacValidateLive(); return; }
+    if(e.blocks&&e.blocks[0]){ document.getElementById('vac-b1s').value=e.blocks[0].start; document.getElementById('vac-b1e').value=e.blocks[0].end; }
+    if(e.blocks&&e.blocks[1]){ document.getElementById('vac-b2s').value=e.blocks[1].start; document.getElementById('vac-b2e').value=e.blocks[1].end; }
+    if(e.holiday&&e.holidaySource==='selected'){ const r=document.querySelector('input[name="vac-holiday"][value="'+e.holiday+'"]'); if(r) r.checked=true; }
+    if(e.xmas2026off) document.querySelector('input[name="vac-xmas26"][value="yes"]').checked=true;
+    if(e.notes) document.getElementById('vac-notes').value=e.notes;
+    if(rslt) rslt.innerHTML='<div class="res info"><h3>Loaded your existing request</h3><p>Submitted '+new Date(e.submitted).toLocaleString()+'. Edit and re-submit to update.</p></div>';
+    vacValidateLive();
+  }).catch(()=>{});
+}
+
+function renderVacAdmin(){
+  const c=document.getElementById('vac-admin');
+  if(!vacAdminUnlocked){
+    c.innerHTML='<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udd12 Scheduler view</h3><p>Enter the scheduler code to view everyone\u2019s requests.</p></div>'
+      +'<div class="nr"><label>Code</label><input type="password" id="vac-code" onkeydown="if(event.key===\'Enter\')vacUnlock()" style="width:160px;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none"></div>'
+      +'<button class="gbtn" onclick="vacUnlock()">Unlock \u2192</button><div id="vac-code-msg" style="margin-top:8px"></div>';
+    return;
+  }
+  c.innerHTML='<div class="ft-no-match" style="color:#1a56db">Loading requests\u2026</div>';
+  fetch('/api/requests').then(r=>r.json()).then(res=>renderVacAdminData((res&&res.data)||{}))
+    .catch(e=>{ c.innerHTML='<div class="res no"><h3>Could not load</h3><p>'+e.message+'</p></div>'; });
+}
+
+function vacUnlock(){
+  const v=(document.getElementById('vac-code').value||'').trim();
+  if(v===VAC_ADMIN_CODE){ vacAdminUnlocked=true; renderVacAdmin(); }
+  else document.getElementById('vac-code-msg').innerHTML='<div class="res no"><p>Incorrect code.</p></div>';
+}
+
+function renderVacAdminData(all){
+  const c=document.getElementById('vac-admin');
+  const provs=Object.keys(all).sort((a,b)=>(all[a].name||a).localeCompare(all[b].name||b));
+  window._vacAll=all;
+  if(!provs.length){ c.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px"><button class="gbtn" onclick="renderVacAdmin()">\u21bb Refresh</button></div><div class="ft-no-match">No requests submitted yet.</div>'; return; }
+  const tally={}; Object.keys(VAC_CFG.holidays).forEach(k=>tally[k]=[]);
+  provs.forEach(p=>{ const e=all[p]; if(e.holiday) (tally[e.holiday]=tally[e.holiday]||[]).push(e.name||p); });
+  let html='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+    +'<button class="gbtn" onclick="renderVacAdmin()">\u21bb Refresh</button>'
+    +'<button class="gbtn" onclick="vacCopyAll()">\ud83d\udccb Copy all as text</button>'
+    +'<span style="align-self:center;font-size:12px;color:#888">'+provs.length+' provider(s) submitted</span></div>';
+  html+='<div class="sq">Holiday tally</div><div class="nbox" style="margin:6px 0 14px">';
+  Object.keys(VAC_CFG.holidays).forEach(k=>{
+    const names=tally[k]||[]; const heavy=names.length>=3;
+    html+='<div style="padding:4px 0;border-bottom:1px solid #f0f0ee"><strong>'+VAC_CFG.holidays[k].label+':</strong> '+(names.length?names.join(', '):'<span style="color:#aaa">none</span>')+' <span style="color:'+(heavy?'#b71c1c':'#888')+'">('+names.length+')'+(heavy?' \u26a0':'')+'</span></div>';
+  });
+  html+='</div><div class="sq">All requests</div>';
+  provs.forEach(p=>{
+    const e=all[p];
+    html+='<div class="nbox" style="margin-bottom:10px">';
+    html+='<div style="display:flex;justify-content:space-between;align-items:baseline"><strong style="font-size:13px">'+(e.name||p)+' <span style="color:#888;font-size:11px">('+p+')</span></strong><span style="font-size:10px;color:#aaa">'+(e.submitted?new Date(e.submitted).toLocaleDateString():'')+'</span></div>';
+    (e.blocks||[]).forEach((b,i)=>{
+      html+='<div style="font-size:12px;margin-top:4px">\ud83d\uddd3 <strong>Block '+(i+1)+':</strong> '+vFmt(b.start)+' \u2013 '+vFmt(b.end)+' ('+b.days+'d)'
+        +(b.spring?' <span class="ft-confidence medium">spring break = holiday</span>':'')
+        +(b.approval?' <span class="ft-confidence medium">needs approval (&gt;2wk)</span>':'')+'</div>';
+    });
+    html+='<div style="font-size:12px;margin-top:4px">\ud83c\udf84 <strong>Holiday:</strong> '+vacHolidayLabel(e.holiday)+(e.holidaySource==='via-block'?' <span style="color:#888">(via block)</span>':'')+'</div>';
+    if(e.holiday==='christmas'&&e.xmas2026off) html+='<div class="res warn" style="margin-top:6px;padding:6px 10px"><p>\u26a0 Requested Christmas 2027 but was OFF Christmas 2026 \u2014 expected to work Christmas 2027.</p></div>';
+    else if(e.xmas2026off) html+='<div style="font-size:11px;color:#92400e;margin-top:4px">Was off Christmas 2026.</div>';
+    if(e.notes) html+='<div style="font-size:12px;margin-top:4px;color:#555">\ud83d\udcdd '+e.notes+'</div>';
+    html+='<div style="margin-top:6px"><button onclick="vacDelete(\''+p+'\')" style="font-size:11px;padding:2px 8px;border:1px solid #eab;border-radius:6px;background:#fff;color:#c00;cursor:pointer;font-family:inherit">Delete this entry</button></div></div>';
+  });
+  c.innerHTML=html;
+}
+
+function vacDelete(p){
+  const all=window._vacAll||{};
+  if(!confirm('Delete the request from '+((all[p]&&all[p].name)||p)+'? This cannot be undone.')) return;
+  fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:p, delete:true})})
+    .then(r=>r.json()).then(()=>renderVacAdmin()).catch(e=>alert('Delete failed: '+e.message));
+}
+
+function vacCopyAll(){
+  const all=window._vacAll||{};
+  const provs=Object.keys(all).sort((a,b)=>(all[a].name||a).localeCompare(all[b].name||b));
+  let t='VACATION REQUESTS 1/1/27\u20137/31/27 + 2027 HOLIDAYS\n\n';
+  provs.forEach(p=>{
+    const e=all[p];
+    t+=(e.name||p)+' ('+p+')\n';
+    (e.blocks||[]).forEach((b,i)=>{ t+='  Block '+(i+1)+': '+vFmt(b.start)+'\u2013'+vFmt(b.end)+' ('+b.days+'d)'+(b.approval?' [NEEDS APPROVAL >2wk]':'')+(b.spring?' [SPRING BREAK=HOLIDAY]':'')+'\n'; });
+    t+='  Holiday: '+vacHolidayLabel(e.holiday)+(e.holidaySource==='via-block'?' (via block)':'')+'\n';
+    if(e.xmas2026off) t+='  Off Christmas 2026: YES'+(e.holiday==='christmas'?' \u2014 but requested Christmas 2027!':'')+'\n';
+    if(e.notes) t+='  Notes: '+e.notes+'\n';
+    t+='\n';
+  });
+  if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert('Copied all requests to clipboard.')).catch(()=>window.prompt('Copy the text below:', t));
+  else window.prompt('Copy the text below:', t);
 }
 
 </script>
