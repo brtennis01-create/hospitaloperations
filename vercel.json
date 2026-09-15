@@ -2,7 +2,7 @@
   "rewrites": [
     { "source": "/api/chat", "destination": "/api/chat" },
     { "source": "/api/census", "destination": "/api/census" },
+    { "source": "/api/requests", "destination": "/api/requests" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
- 
