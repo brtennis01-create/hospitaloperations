@@ -2815,7 +2815,13 @@ function flexToggleDay(site, i, checked) {
 
 
 // ===== VACATION REQUESTS =====
-const VAC_ADMIN_CODE = 'sched27';   // <-- CHANGE THIS. Schedulers' code for the "Scheduler view" tab.
+const VAC_ADMIN_CODE = 'Sched27';   // Schedulers' code for the "Scheduler view" tab.
+
+// Submission deadline: Thu Oct 1, 2026, 9:00am Pacific (PDT = UTC-7).
+// Hardcoded UTC instant so it fires correctly regardless of the device's clock/timezone.
+const VAC_DEADLINE = new Date('2026-10-01T16:00:00Z');
+const VAC_DEADLINE_LABEL = 'Thursday, October 1, 2026 at 9:00 AM PST';
+function vacPastDeadline(){ return new Date() >= VAC_DEADLINE; }
 
 const VAC_ROSTER = {
  'AK':'Alexander Ko','ASh':'Ashley Shah','ASit':'Alan Sit','AlB':'Alan Beneze',
@@ -2846,13 +2852,14 @@ const VAC_CFG = {
 };
 
 let vacInited=false, vacAdminUnlocked=false;
-function initVac(){ switchVacTab('submit'); if(!vacInited){ vacInited=true; renderVacForm(); } }
+function initVac(){ switchVacTab('submit'); vacInited=true; renderVacForm(); }
 function switchVacTab(tab){
   ['submit','admin'].forEach(t=>{
     document.getElementById('vactab-'+t).className='rtab'+(t===tab?' active':'');
     document.getElementById('vacpane-'+t).className='rpane'+(t===tab?' active':'');
   });
   if(tab==='admin') renderVacAdmin();
+  if(tab==='submit') renderVacForm();
 }
 function vDays(s,e){ return Math.round((new Date(e+'T12:00:00')-new Date(s+'T12:00:00'))/86400000)+1; }
 function vOverlap(s1,e1,s2,e2){ return s1<=e2 && s2<=e1; }
@@ -2861,12 +2868,21 @@ function vacHolidayLabel(k){ return k&&VAC_CFG.holidays[k]?VAC_CFG.holidays[k].l
 
 function renderVacForm(){
   const c=document.getElementById('vac-submit');
+  if(!c) return;
+  if(vacPastDeadline()){
+    c.innerHTML=
+      '<div class="res warn" style="margin-bottom:14px"><h3>\ud83d\udd12 Submissions are closed</h3>'
+      +'<p>The deadline to submit or change schedule requests was <strong>'+VAC_DEADLINE_LABEL+'</strong>.\n\n'
+      +'This tool is no longer accepting requests. If you have a late request or need a change, contact the schedulers directly \u2014 they can still enter it on your behalf.</p></div>';
+    return;
+  }
   const ws=VAC_CFG.windowStart, we=VAC_CFG.windowEnd;
   let holidayOpts='<label class="crow" style="margin-bottom:6px"><input type="radio" name="vac-holiday" value="none" checked> None / not requesting a holiday</label>';
   Object.keys(VAC_CFG.holidays).forEach(k=>{ holidayOpts+='<label class="crow" style="margin-bottom:6px"><input type="radio" name="vac-holiday" value="'+k+'"> '+VAC_CFG.holidays[k].label+'</label>'; });
   c.innerHTML=
     '<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udcdd Requests for 1/1/27 \u2013 7/31/27 + 2027 holidays</h3>'
-    +'<p>You may request up to <strong>2 vacation blocks</strong> (Jan 1 \u2013 Jul 31) plus <strong>one holiday week</strong>. Blocks over 2 weeks need scheduling approval. If a block includes spring break, it counts as your holiday request. You can only pick one late-December week (Christmas <em>or</em> New Year\u2019s).</p></div>'
+    +'<p>You may request up to <strong>2 vacation blocks</strong> (Jan 1 \u2013 Jul 31) plus <strong>one holiday week</strong>. Blocks over 2 weeks need scheduling approval. If a block includes spring break, it counts as your holiday request. You can only pick one late-December week (Christmas <em>or</em> New Year\u2019s).</p>'
+    +'<p style="margin-top:6px"><strong>Deadline: '+VAC_DEADLINE_LABEL+'.</strong></p></div>'
     +'<div class="sq">Your name</div>'
     +'<div class="nr"><label>Provider</label><select id="vac-provider" onchange="vacLoadExisting()" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none"><option value="">Select your name\u2026</option></select></div>'
     +'<div class="sq" style="margin-top:16px">Vacation block 1 (Jan 1 \u2013 Jul 31)</div>'
@@ -2935,14 +2951,19 @@ function vacValidateLive(){
 }
 
 function vacSubmit(){
-  const data=vacGather(),v=vacValidate(data),out=document.getElementById('vac-submit-result');
+  const out=document.getElementById('vac-submit-result');
+  if(vacPastDeadline()){
+    renderVacForm();
+    return;
+  }
+  const data=vacGather(),v=vacValidate(data);
   if(v.errors.length){ out.innerHTML='<div class="res no"><h3>\u2717 Not submitted</h3><p>'+v.errors.map(e=>'\u2022 '+e).join('\n')+'</p></div>'; return; }
   const entry={provider:data.provider,name:vacProviderName(data.provider),blocks:v.finalBlocks,holiday:v.holiday,holidaySource:v.holidaySource,xmas2026off:data.xmas2026off,notes:data.notes,submitted:new Date().toISOString()};
   out.innerHTML='<div class="ft-no-match" style="color:#1a56db">Saving\u2026</div>';
   fetch('/api/requests',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({provider:entry.provider, entry})})
     .then(r=>r.json()).then(res=>{
       if(res&&res.ok){
-        let msg='<div class="res yes"><h3>\u2713 Request submitted</h3><p>Thanks, '+entry.name+'. Your request is saved and visible to the schedulers. You can come back and edit it any time.</p></div>';
+        let msg='<div class="res yes"><h3>\u2713 Request submitted</h3><p>Thanks, '+entry.name+'. Your request is saved and visible to the schedulers. You can come back and edit it any time before the deadline.</p></div>';
         if(v.warnings.length) msg+='<div class="res warn" style="margin-top:8px"><h3>Noted for scheduling review</h3><p>'+v.warnings.map(w=>'\u2022 '+w).join('\n')+'</p></div>';
         out.innerHTML=msg;
       } else throw new Error((res&&res.error)||'unknown error');
@@ -2993,10 +3014,13 @@ function renderVacAdminData(all){
   const c=document.getElementById('vac-admin');
   const provs=Object.keys(all).sort((a,b)=>(all[a].name||a).localeCompare(all[b].name||b));
   window._vacAll=all;
-  if(!provs.length){ c.innerHTML='<div style="display:flex;gap:8px;margin-bottom:12px"><button class="gbtn" onclick="renderVacAdmin()">\u21bb Refresh</button></div><div class="ft-no-match">No requests submitted yet.</div>'; return; }
+  const deadlineNote=vacPastDeadline()
+    ? '<div class="res warn" style="margin-bottom:10px;padding:8px 12px"><p>Submissions closed '+VAC_DEADLINE_LABEL+'. Providers can no longer submit; you can still add or edit entries below.</p></div>'
+    : '<div class="res info" style="margin-bottom:10px;padding:8px 12px"><p>Submissions open until '+VAC_DEADLINE_LABEL+'.</p></div>';
+  if(!provs.length){ c.innerHTML=deadlineNote+'<div style="display:flex;gap:8px;margin-bottom:12px"><button class="gbtn" onclick="renderVacAdmin()">\u21bb Refresh</button></div><div class="ft-no-match">No requests submitted yet.</div>'; return; }
   const tally={}; Object.keys(VAC_CFG.holidays).forEach(k=>tally[k]=[]);
   provs.forEach(p=>{ const e=all[p]; if(e.holiday) (tally[e.holiday]=tally[e.holiday]||[]).push(e.name||p); });
-  let html='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
+  let html=deadlineNote+'<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">'
     +'<button class="gbtn" onclick="renderVacAdmin()">\u21bb Refresh</button>'
     +'<button class="gbtn" onclick="vacCopyAll()">\ud83d\udccb Copy all as text</button>'
     +'<span style="align-self:center;font-size:12px;color:#888">'+provs.length+' provider(s) submitted</span></div>';
