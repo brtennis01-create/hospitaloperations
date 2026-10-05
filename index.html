@@ -765,7 +765,7 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help','sched','resident','flex','vac'].forEach(n => {
+  ['qa','day','pm','route','onboard','help','sched','resident','flex','vac','swap'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
