@@ -182,6 +182,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-vac" onclick="show('vac')">
       <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14l2 2 4-4"/></svg> Vacation requests
     </div>
+    <div class="nav-item" id="nav-swap" onclick="show('swap')">
+      <svg viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M8 21H3v-5"/><path d="M3 21l7-7"/></svg> Shift swaps
+    </div>
     <div class="nav-item" id="nav-help" onclick="show('help')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg> How to use
     </div>
@@ -201,6 +204,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
   </div>
 
   <div class="main">
+      <div class="main">
+
+    <!-- SHIFT SWAPS -->
+    <div class="panel" id="panel-swap">
+      <div class="ph"><h1>Shift swaps</h1><span class="badge-blue">Coverage finder</span></div>
+      <div class="rtabs">
+        <button class="rtab active" id="swaptab-admin" onclick="switchSwapTab('admin')">&#128274; Scheduler area</button>
+      </div>
+      <div class="rpane active" id="swappane-admin"><div class="rpane-scroll" id="swap-admin"></div></div>
+      <div class="pfoot">Suggestions only &middot; Always confirm coverage in Amion before finalizing</div>
+    </div>
 
     <!-- VACATION REQUESTS -->
     <div class="panel" id="panel-vac">
@@ -761,6 +775,7 @@ function show(name) {
   if (name==='sched') initSchedule();
   if (name==='flex') initFlex();
   if (name==='vac') initVac();
+    if (name==='swap') initSwap();
 }
 
 function switchSchTab(tab) {
@@ -3070,6 +3085,292 @@ function vacCopyAll(){
   });
   if(navigator.clipboard) navigator.clipboard.writeText(t).then(()=>alert('Copied all requests to clipboard.')).catch(()=>window.prompt('Copy the text below:', t));
   else window.prompt('Copy the text below:', t);
+}
+
+// ===== SHIFT SWAPS (part 1: scheduler admin — schedule upload + provider status) =====
+const SWAP_ADMIN_CODE = 'Sched27';   // same scheduler code as vacation tool; change if desired
+
+// --- locked roster: tier + shift prefs (primary strong, secondary plausible) ---
+// tiers: nocturnist | day | pm | pmhs | flexible | moonlighter
+// nightFav: flexible people who rank up for HS coverage
+const SWAP_ROSTER = {
+  // nocturnists
+  'KPat':{name:'Karna Patel',tier:'nocturnist',primary:'hs'},
+  'NS':{name:'Natasha Surette',tier:'nocturnist',primary:'hs'},
+  'MA':{name:'Mayank Amin',tier:'nocturnist',primary:'hs',secondary:'pm'},
+  'NH':{name:'Nima Hajazimzanjani',tier:'nocturnist',primary:'hs',secondary:'pm,day'},
+  'LF':{name:'Liam Flanagan',tier:'nocturnist',primary:'hs',secondary:'pm,day'},
+  // day-leaning
+  'LN':{name:'Laura Nicholson',tier:'day',primary:'day',secondary:'pm'},
+  'LJQ':{name:'Liesbet Joris-Quinton',tier:'day',primary:'day',secondary:'pm'},
+  'JM':{name:'Jordan Martinez',tier:'pm',primary:'pm',secondary:'day'},
+  'EW':{name:'Enoch Wang',tier:'pm',primary:'pm'},
+  // pm/hs, day-unlikely
+  'V S':{name:'Victor Stewart',tier:'pmhs',primary:'pm,hs'},
+  'SJ':{name:'Stuti Jaiswal',tier:'pmhs',primary:'pm,hs'},
+  // flexible, night-favorable
+  'NJ':{name:'Neal Jones',tier:'flexible',nightFav:true},
+  'GG':{name:'Gauri Gadre',tier:'flexible',nightFav:true},
+  'MS':{name:'Matt Stagg',tier:'flexible',nightFav:true},
+  'Gh':{name:'Gabrielle Horner',tier:'flexible',nightFav:true},
+  'MV':{name:'Michael Vu',tier:'flexible',nightFav:true},
+  'ASh':{name:'Ashley Shah',tier:'flexible',nightFav:true},
+  'SKu':{name:'Samuel Kung',tier:'flexible',nightFav:true},
+  'SK':{name:'Shari Krevitz',tier:'flexible',nightFav:true},
+  'OJa':{name:'Ola Jandali',tier:'flexible',nightFav:true},
+  'RTi':{name:'Robert Tickes',tier:'flexible',nightFav:true},
+  'CW':{name:'Caitlin Whelan',tier:'flexible',nightFav:true},
+  // flexible (plain)
+  'VC':{name:'Virginia Chan',tier:'flexible'},
+  'TM':{name:'Thomas McCarthy',tier:'flexible'},
+  'AK':{name:'Alexander Ko',tier:'flexible'},
+  'DJ':{name:'Derek Jones',tier:'flexible'},
+  'JB':{name:'Josef Bauer',tier:'flexible'},
+  'FS':{name:'Farhad Shadan',tier:'flexible'},
+  'KB':{name:'Khamisah Barger',tier:'flexible'},
+  'ASit':{name:'Alan Sit',tier:'flexible'},
+  'DN':{name:'Dominic Nguyen',tier:'flexible'},
+  'JCH':{name:'Joshua Cheng',tier:'flexible'},
+  'DL':{name:'Darius Leung',tier:'flexible'},
+  'LWa':{name:'Luke Walsh',tier:'flexible'},
+  'JMi':{name:'Jean Min',tier:'flexible'},
+  'NK':{name:'Neil Kalra',tier:'flexible'},
+  'RY':{name:'Roger Yu',tier:'flexible'},
+  'AlB':{name:'Alan Beneze',tier:'flexible'},
+  'DuD':{name:'Duc Do',tier:'flexible'},
+  'XL':{name:'Xiaoli Liu',tier:'flexible'},
+  'LD':{name:'Linda Ding',tier:'flexible'},
+  'KA':{name:'Karima Ali',tier:'flexible'},
+  'DM':{name:'Diane McNally',tier:'flexible'},
+  'JLe':{name:'Jacklyn Lee',tier:'flexible'},
+  'JH':{name:'James Hart',tier:'flexible'},
+  'EF':{name:'Elizabeth Farrell',tier:'flexible'},
+  'MM':{name:'Michaela Miller',tier:'flexible'},
+  // moonlighters (primary strong / secondary plausible)
+  'PT':{name:'Paul Thompson',tier:'moonlighter',primary:'pm',secondary:'day'},
+  'NP':{name:'Nihal Patel',tier:'moonlighter',primary:'day',secondary:'pm'},
+  'JD':{name:'Jessie Degani',tier:'moonlighter',primary:'day',secondary:'pm'},
+  'JO':{name:"John O'Fee",tier:'moonlighter',primary:'pm',secondary:'hs'},
+  'CZ':{name:'Cameron Zenger',tier:'moonlighter',primary:'day',secondary:'pm'},
+  'AFi':{name:'Austin Ficara',tier:'moonlighter',primary:'pm',secondary:'day'},
+  'GT':{name:'Garret Teskey',tier:'moonlighter',primary:'pm',secondary:'day'}
+};
+const SWAP_CODES = Object.keys(SWAP_ROSTER).sort((a,b)=>SWAP_ROSTER[a].name.localeCompare(SWAP_ROSTER[b].name));
+function swapName(c){ return (SWAP_ROSTER[c]&&SWAP_ROSTER[c].name)||c; }
+
+// --- color map for the xlsx parser (hex, FF-alpha stripped, uppercase) ---
+const SWAP_COLORS = {
+  GREEN_DAY:['92D050','9CF043'], MEM_DAY:['CD9DE0'], FLEX:['FFFF00'],
+  PM_EARLY:['00B0F0'], PM_LATE:['00B050'], PM_MEM:['FF0DE3','FF21FB'], HS_MEM:['7030A0']
+};
+let swapInited=false, swapAdminUnlocked=false, swapParsed=null;
+
+function initSwap(){ switchSwapTab('admin'); if(!swapInited){ swapInited=true; } }
+function switchSwapTab(tab){
+  ['admin'].forEach(t=>{
+    const b=document.getElementById('swaptab-'+t), p=document.getElementById('swappane-'+t);
+    if(b) b.className='rtab'+(t===tab?' active':'');
+    if(p) p.className='rpane'+(t===tab?' active':'');
+  });
+  if(tab==='admin') renderSwapAdmin();
+}
+
+function renderSwapAdmin(){
+  const c=document.getElementById('swap-admin');
+  if(!swapAdminUnlocked){
+    c.innerHTML='<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udd12 Scheduler area</h3><p>Enter the scheduler code to upload the schedule and manage provider status.</p></div>'
+      +'<div class="nr"><label>Code</label><input type="password" id="swap-code" onkeydown="if(event.key===\'Enter\')swapUnlock()" style="width:160px;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;outline:none"></div>'
+      +'<button class="gbtn" onclick="swapUnlock()">Unlock \u2192</button><div id="swap-code-msg" style="margin-top:8px"></div>';
+    return;
+  }
+  c.innerHTML=
+    '<div class="sq">Current schedule snapshot</div><div id="swap-snap" class="nbox" style="margin:6px 0 16px">Loading\u2026</div>'
+    +'<div class="sq">Upload a new schedule</div>'
+    +'<div class="sd">Upload the master schedule (.xlsx). It parses in your browser \u2014 review the preview, then confirm to save. Nothing is stored until you confirm.</div>'
+    +'<input type="file" id="swap-file" accept=".xlsx" onchange="swapHandleFile(event)" style="font-size:13px;margin-bottom:10px">'
+    +'<div id="swap-parse"></div>'
+    +'<div class="sq" style="margin-top:18px">Provider status &amp; shift preferences</div>'
+    +'<div class="sd">Used to rank who\u2019s most likely to cover a shift. Edit any row; changes save when you click Save status.</div>'
+    +'<div id="swap-status"></div>';
+  swapLoadSnapshot();
+  swapRenderStatus();
+  // ensure SheetJS is loaded
+  swapEnsureXLSX();
+}
+function swapUnlock(){
+  const v=(document.getElementById('swap-code').value||'').trim();
+  if(v===SWAP_ADMIN_CODE){ swapAdminUnlocked=true; renderSwapAdmin(); }
+  else document.getElementById('swap-code-msg').innerHTML='<div class="res no"><p>Incorrect code.</p></div>';
+}
+
+// lazy-load SheetJS from the CDN already allowed in the app
+function swapEnsureXLSX(cb){
+  if(window.XLSX){ if(cb) cb(); return; }
+  if(document.getElementById('xlsx-lib')){ if(cb){ const i=setInterval(()=>{ if(window.XLSX){clearInterval(i);cb();} },100);} return; }
+  const s=document.createElement('script'); s.id='xlsx-lib';
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  s.onload=()=>{ if(cb) cb(); };
+  document.head.appendChild(s);
+}
+
+function swapColorOf(cell){
+  if(cell&&cell.s&&cell.s.patternType==='solid'&&cell.s.fgColor&&cell.s.fgColor.rgb){
+    let h=String(cell.s.fgColor.rgb).toUpperCase();
+    if(h.length===8) h=h.slice(2); // strip FF alpha
+    return h;
+  }
+  return null;
+}
+function swapClassify(text,col){
+  const t=text.trim().toLowerCase(), C=SWAP_COLORS;
+  const inc=(arr)=>arr.indexOf(col)>=0;
+  if(t==='day'){ if(inc(C.FLEX)) return['flex',null]; if(inc(C.MEM_DAY)) return['day','Memorial']; return['day','Green']; }
+  if(t==='pm'){ if(inc(C.PM_MEM)) return['pm','Memorial']; if(inc(C.PM_EARLY)) return['pm','Green']; if(inc(C.PM_LATE)) return['pm','Green']; return['pm','Green']; }
+  if(t==='hs'){ if(inc(C.HS_MEM)) return['hs','Memorial']; return['hs','Green']; }
+  if(t==='jeop') return['jeop',null];
+  if(t==='flex') return['flex',null];
+  if(t.indexOf('surge')===0) return['surge',null];
+  return[null,null];
+}
+
+function swapHandleFile(ev){
+  const f=ev.target.files&&ev.target.files[0];
+  const out=document.getElementById('swap-parse');
+  if(!f){ out.innerHTML=''; return; }
+  out.innerHTML='<div class="ft-no-match" style="color:#1a56db">Reading file\u2026</div>';
+  swapEnsureXLSX(()=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      try{ swapParseWorkbook(e.target.result); }
+      catch(err){ out.innerHTML='<div class="res no"><h3>\u2717 Could not read the file</h3><p>'+err.message+'. Nothing was saved. Make sure it\u2019s the master .xlsx with the colored schedule.</p></div>'; }
+    };
+    reader.readAsArrayBuffer(f);
+  });
+}
+
+function swapParseWorkbook(buf){
+  const out=document.getElementById('swap-parse');
+  const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellStyles:true});
+  const ws=wb.Sheets['complete schedule'];
+  if(!ws){ out.innerHTML='<div class="res no"><h3>\u2717 Tab not found</h3><p>Could not find a tab named \u201ccomplete schedule\u201d. Nothing saved.</p></div>'; return; }
+  const range=XLSX.utils.decode_range(ws['!ref']);
+  const HDR=16; // row 17 (0-indexed 16) = provider initials
+  const prov={};
+  for(let c=2;c<=57;c++){ const a=XLSX.utils.encode_cell({r:HDR,c:c}); const cell=ws[a]; if(cell&&cell.v&&String(cell.v).trim()) prov[c]=String(cell.v).trim(); }
+  const shifts=[]; let dates=new Set(); const bad={};
+  for(let R=17;R<=range.e.r;R++){
+    const dcell=ws[XLSX.utils.encode_cell({r:R,c:1})];
+    let d=null;
+    if(dcell){
+      if(dcell.t==='d'&&dcell.v instanceof Date) d=dcell.v.toISOString().slice(0,10);
+      else if(typeof dcell.v==='number'){ const dt=XLSX.SSF.parse_date_code(dcell.v); if(dt) d=dt.y+'-'+String(dt.m).padStart(2,'0')+'-'+String(dt.d).padStart(2,'0'); }
+    }
+    if(!d) continue;
+    for(const c in prov){
+      const cell=ws[XLSX.utils.encode_cell({r:R,c:+c})];
+      if(!cell||cell.v==null||String(cell.v).trim()==='') continue;
+      const txt=String(cell.v).trim();
+      if(['day','pm','hs','jeop','flex','surge p','surge s'].indexOf(txt.toLowerCase())<0){
+        if(!/^-?\d+(\.\d+)?$/.test(txt)) bad[txt]=(bad[txt]||0)+1;
+        continue;
+      }
+      const r=swapClassify(txt,swapColorOf(cell));
+      if(r[0]){ shifts.push({d:d,p:prov[c],s:r[0],site:r[1]}); dates.add(d); }
+    }
+  }
+  const ds=[...dates].sort();
+  swapParsed={ shifts:shifts, uploadedAt:new Date().toISOString(), uploadedBy:'', shiftCount:shifts.length, dateRange:(ds[0]||'?')+' \u2192 '+(ds[ds.length-1]||'?') };
+
+  // sanity checks
+  const bySite={Green:0,Memorial:0,other:0};
+  shifts.forEach(x=>{ if(x.site==='Green')bySite.Green++; else if(x.site==='Memorial')bySite.Memorial++; else bySite.other++; });
+  const hsCount=shifts.filter(x=>x.s==='hs').length;
+  const ok = shifts.length>1000 && bySite.Green>0 && bySite.Memorial>0 && hsCount>0;
+
+  // preview a sample day near the middle
+  const midDate=ds[Math.floor(ds.length/2)];
+  const sample=shifts.filter(x=>x.d===midDate).sort((a,b)=>(a.s+a.p).localeCompare(b.s+b.p));
+
+  let html='<div class="res '+(ok?'yes':'warn')+'" style="margin-top:10px"><h3>'+(ok?'\u2713 Parsed successfully':'\u26a0 Parsed, but numbers look off \u2014 review carefully')+'</h3>'
+    +'<p>'+shifts.length+' shifts \u00b7 '+swapParsed.dateRange+'\n'
+    +'Green: '+bySite.Green+' \u00b7 Memorial: '+bySite.Memorial+' \u00b7 HS (nights): '+hsCount
+    +(Object.keys(bad).length?('\n\u26a0 Unrecognized cell values: '+JSON.stringify(bad)):'')+'</p></div>';
+  html+='<div class="nbox" style="max-height:220px;overflow-y:auto"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Sample day \u2014 '+midDate+' ('+sample.length+' working). Confirm this matches the schedule:</div>';
+  sample.forEach(x=>{ html+='<div style="font-size:12px;padding:2px 0">'+swapName(x.p)+' <span style="color:#888">('+x.p+')</span> \u2014 '+x.s+(x.site?' '+x.site:'')+'</div>'; });
+  html+='</div>';
+  html+='<div class="nr" style="margin-top:10px"><label>Your initials</label><select id="swap-upby" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"><option value="">(optional)</option>'
+    +SWAP_CODES.map(c=>'<option value="'+c+'">'+swapName(c)+'</option>').join('')+'</select></div>';
+  html+='<button class="ft-btn" onclick="swapConfirmSave()">\u2713 Confirm &amp; save this schedule</button>';
+  html+='<div id="swap-save-result" style="margin-top:10px"></div>';
+  out.innerHTML=html;
+}
+
+function swapConfirmSave(){
+  if(!swapParsed) return;
+  const by=document.getElementById('swap-upby'); if(by) swapParsed.uploadedBy=by.value||'';
+  const out=document.getElementById('swap-save-result');
+  out.innerHTML='<div class="ft-no-match" style="color:#1a56db">Saving\u2026</div>';
+  fetch('/api/swaps?key=schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:swapParsed})})
+    .then(r=>r.json()).then(res=>{
+      if(res&&res.ok){ out.innerHTML='<div class="res yes"><h3>\u2713 Schedule saved</h3><p>This snapshot is now live for coverage lookups.</p></div>'; swapLoadSnapshot(); }
+      else throw new Error((res&&res.error)||'unknown');
+    }).catch(e=>{ out.innerHTML='<div class="res no"><h3>\u2717 Could not save</h3><p>'+e.message+' \u2014 nothing was stored.</p></div>'; });
+}
+
+function swapLoadSnapshot(){
+  const el=document.getElementById('swap-snap'); if(!el) return;
+  fetch('/api/swaps?key=schedule').then(r=>r.json()).then(res=>{
+    const d=res&&res.data;
+    if(!d){ el.innerHTML='<span style="color:#b71c1c">No schedule loaded yet \u2014 upload one below.</span>'; return; }
+    const ageMs=Date.now()-new Date(d.uploadedAt).getTime();
+    const ageH=ageMs/3600000;
+    let tone='#1b5e20', warn='';
+    if(ageH>168){ tone='#b71c1c'; warn=' \u2014 \u26a0 over a week old, likely stale'; }
+    else if(ageH>36){ tone='#78350f'; warn=' \u2014 \u26a0 getting old, consider re-uploading'; }
+    const when=new Date(d.uploadedAt).toLocaleString();
+    el.innerHTML='<div><strong>'+d.shiftCount+' shifts</strong> \u00b7 '+d.dateRange+'</div>'
+      +'<div style="color:'+tone+';margin-top:3px">As of '+when+(d.uploadedBy?(' \u00b7 by '+swapName(d.uploadedBy)):'')+warn+'</div>';
+  }).catch(()=>{ el.innerHTML='<span style="color:#b71c1c">Could not load snapshot.</span>'; });
+}
+
+// --- provider status screen ---
+let swapStatusData={};
+function swapRenderStatus(){
+  const el=document.getElementById('swap-status'); if(!el) return;
+  fetch('/api/swaps?key=status').then(r=>r.json()).then(res=>{
+    swapStatusData=(res&&res.data)||{};
+    swapDrawStatus();
+  }).catch(()=>{ swapStatusData={}; swapDrawStatus(); });
+}
+function swapDrawStatus(){
+  const el=document.getElementById('swap-status'); if(!el) return;
+  const tiers=['nocturnist','day','pm','pmhs','flexible','moonlighter'];
+  const tierLabel={nocturnist:'Nocturnist',day:'Day',pm:'PM',pmhs:'PM/HS (days unlikely)',flexible:'Flexible',moonlighter:'Moonlighter'};
+  let html='<button class="gbtn" style="margin-bottom:8px" onclick="swapSaveStatus()">Save status</button> <span id="swap-status-msg" style="font-size:12px;color:#888"></span>'
+    +'<div class="nbox" style="max-height:360px;overflow-y:auto;padding:4px 10px">';
+  SWAP_CODES.forEach(c=>{
+    const base=SWAP_ROSTER[c], ov=swapStatusData[c]||{};
+    const tier=ov.tier||base.tier;
+    const nightFav=ov.nightFav!==undefined?ov.nightFav:!!base.nightFav;
+    html+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0ee;font-size:12px">'
+      +'<span style="min-width:150px">'+base.name+' <span style="color:#888">('+c+')</span></span>'
+      +'<select onchange="swapStatusSet(\''+c+'\',\'tier\',this.value)" style="font-size:12px;padding:3px 6px;border:1px solid #ddd;border-radius:6px">'
+      +tiers.map(t=>'<option value="'+t+'"'+(t===tier?' selected':'')+'>'+tierLabel[t]+'</option>').join('')+'</select>'
+      +'<label style="font-size:11px;color:#555;display:flex;align-items:center;gap:3px"><input type="checkbox" '+(nightFav?'checked':'')+' onchange="swapStatusSet(\''+c+'\',\'nightFav\',this.checked)"> night-favorable</label>'
+      +'</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+function swapStatusSet(code,field,val){
+  if(!swapStatusData[code]) swapStatusData[code]={};
+  swapStatusData[code][field]=val;
+}
+function swapSaveStatus(){
+  const msg=document.getElementById('swap-status-msg'); if(msg) msg.textContent='Saving\u2026';
+  fetch('/api/swaps?key=status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:swapStatusData})})
+    .then(r=>r.json()).then(res=>{ if(msg) msg.textContent=res&&res.ok?'Saved \u2713':'Save failed'; })
+    .catch(()=>{ if(msg) msg.textContent='Save failed'; });
 }
 
 </script>
