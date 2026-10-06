@@ -3499,7 +3499,9 @@ function swapStripHtml(me){
       const past=ds<today;
       const sh=byDate[ds];
       let cell='<div style="min-height:40px;border:0.5px solid #f0f0ee;padding:2px'+(wknd?';background:#faf7f0':'')+(past?';opacity:0.35':'')+'">';
-      cell+='<div style="font-size:9px;color:#bbb;text-align:right">'+dt.getDate()+'</div>';
+      var dayNum=dt.getDate();
+      var dayLabel = dayNum===1 ? '<strong style="color:#1a56db">'+dt.toLocaleDateString(undefined,{month:'short'})+' 1</strong>' : dayNum;
+      cell+='<div style="font-size:9px;color:#bbb;text-align:right">'+dayLabel+'</div>';
       if(sh && !past){
         const sel=swapSelShifts.some(x=>x.d===sh.d);
         const col=swapTypeColor(sh.s);
