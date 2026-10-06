@@ -3465,6 +3465,11 @@ function swapPickName(){
   if(swapMode==='swap'){
     h+='<div class="sq" style="margin-top:14px">3. When would you rather work? <span style="font-weight:400;color:#888;font-size:12px">(optional)</span></div>'
       +'<div class="sd">Leave blank for any date (nearest first), or set a window to find trades into the dates you want.</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">'
+      +'<button onclick="swapQuickWin(14)" style="padding:4px 10px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer;font-family:inherit;font-size:11px">Next 2 weeks</button>'
+      +'<button onclick="swapQuickWin(30)" style="padding:4px 10px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer;font-family:inherit;font-size:11px">Next month</button>'
+      +'<button onclick="swapQuickWin(90)" style="padding:4px 10px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer;font-family:inherit;font-size:11px">Next 3 months</button>'
+      +'<button onclick="swapQuickWin(0)" style="padding:4px 10px;border:1px solid #ddd;border-radius:14px;background:#fff;cursor:pointer;font-family:inherit;font-size:11px">Clear</button></div>'
       +'<div class="nr"><label>From</label><input type="date" id="swap-win-s" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
       +'<div class="nr"><label>To</label><input type="date" id="swap-win-e" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
       +'<button class="ft-btn" style="margin-top:6px" onclick="swapRunSwap()">\u2192 Find swaps</button>';
@@ -3516,7 +3521,12 @@ function swapStripHtml(me){
   const lastDt=new Date(swapStripStart+'T12:00:00'); lastDt.setDate(lastDt.getDate()+SWAP_WEEKS*7-1);
   const mo=o=>o.toLocaleDateString(undefined,{month:'long',year:'numeric'});
   const span=mo(firstDt)===mo(lastDt)?mo(firstDt):mo(firstDt)+' \u2013 '+mo(lastDt);
-  h='<div style="font-size:11px;color:#888;margin:4px 0 3px">'+span+'</div>'+h;
+  const nav='<div style="display:flex;align-items:center;gap:8px;margin:4px 0 3px">'
+    +'<button onclick="swapPageStrip(-1)" style="padding:2px 9px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">\u2190</button>'
+    +'<span style="font-size:11px;color:#888;flex:1;text-align:center">'+span+'</span>'
+    +'<button onclick="swapPageStrip(1)" style="padding:2px 9px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;font-size:13px">\u2192</button>'
+    +'<button onclick="swapPageStrip(0)" style="padding:2px 10px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-family:inherit;font-size:11px">Today</button></div>';
+  h=nav+h;
   return h;
 }
 
@@ -3528,6 +3538,21 @@ function swapTapShift(d,s,site){
   const n=swapSelShifts.length;
   const cnt=document.getElementById('swap-sel-count');
   if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1?' (block)':'')) : '';
+}
+function swapQuickWin(days){
+  const s=document.getElementById('swap-win-s'), e=document.getElementById('swap-win-e');
+  if(!s||!e) return;
+  if(days===0){ s.value=''; e.value=''; return; }
+  const t=new Date(swapTodayStr()+'T12:00:00');
+  const end=new Date(t); end.setDate(end.getDate()+days);
+  s.value=t.toISOString().slice(0,10);
+  e.value=end.toISOString().slice(0,10);
+}
+function swapPageStrip(dir){
+  if(dir===0){ const t=new Date(swapTodayStr()+'T12:00:00'); t.setDate(t.getDate()-t.getDay()); swapStripStart=t.toISOString().slice(0,10); }
+  else { const t=new Date(swapStripStart+'T12:00:00'); t.setDate(t.getDate()+dir*SWAP_WEEKS*7); swapStripStart=t.toISOString().slice(0,10); }
+  const me=document.getElementById('swap-me').value;
+  document.getElementById('swap-strip').innerHTML=swapStripHtml(me);
 }
 
 // core: find swaps for ONE of my shifts
