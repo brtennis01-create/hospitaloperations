@@ -3439,38 +3439,95 @@ function swapDrawFind(){
   c.innerHTML=html;
 }
 
+var SWAP_WEEKS=6;           // how many weeks the strip shows
+var swapStripStart=null;    // Sunday of the first week shown
+function swapTodayStr(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
+function swapTypeColor(s){ return s==='day'?'#92D050':s==='pm'?'#00B0F0':s==='hs'?'#7030A0':'#bbb'; }
+function swapTypeAbbr(s){ return s==='day'?'Day':s==='pm'?'PM':s==='hs'?'HS':s; }
+
 function swapPickName(){
   const me=document.getElementById('swap-me').value;
   const box=document.getElementById('swap-myshifts');
   swapSelShifts=[];
   if(!me){ box.innerHTML=''; return; }
-  const mine=(swapSchedule.shifts||[]).filter(x=>x.p===me && SWAP_TRADE_TYPES.indexOf(x.s)>=0).sort((a,b)=>a.d.localeCompare(b.d));
-  if(!mine.length){ box.innerHTML='<div class="ft-no-match" style="margin-top:8px">No day/PM/HS shifts found for you in the current schedule.</div>'; return; }
-  let h='<div class="sq" style="margin-top:16px">2. Which shift(s) do you '+(swapMode==='give'?'want to give away':'need to give up')+'?</div><div class="sd">Check one or more'+(swapMode==='swap'?' (a block). Then set your options below.':' (a block).')+'</div>';
-  h+='<div class="nbox" style="max-height:220px;overflow-y:auto">';
-  mine.forEach((x,i)=>{
-    h+='<label style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0ee;font-size:12px;cursor:pointer">'
-      +'<input type="checkbox" value="'+x.d+'|'+x.s+'|'+(x.site||'')+'" onchange="swapToggleShift(this)" style="width:15px;height:15px">'
-      +'<span>'+swapFmtDate(x.d)+' \u00b7 <strong>'+swapTypeLabel(x.s)+'</strong>'+(x.site?' \u00b7 '+x.site:'')+'</span></label>';
-  });
-  h+='</div>';
+  // first week = Sunday on/before today
+  const t=new Date(swapTodayStr()+'T12:00:00'); t.setDate(t.getDate()-t.getDay());
+  swapStripStart=t.toISOString().slice(0,10);
+  const mine=(swapSchedule.shifts||[]).filter(x=>x.p===me && SWAP_TRADE_TYPES.indexOf(x.s)>=0 && x.d>=swapTodayStr());
+  if(!mine.length){ box.innerHTML='<div class="ft-no-match" style="margin-top:8px">No upcoming day/PM/HS shifts found for you in the current schedule.</div>'; return; }
+  let h='<div class="sq" style="margin-top:16px">2. Tap the shift(s) you '+(swapMode==='give'?'want to give away':'need to give up')+'</div>'
+    +'<div class="sd">Your upcoming shifts. Tap to select one or more (a block). '
+    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#92D050;margin:0 2px 0 6px"></span>Day</span>'
+    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#00B0F0;margin:0 2px 0 6px"></span>PM</span>'
+    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7030A0;margin:0 2px 0 6px"></span>HS</span></div>';
+  h+='<div id="swap-strip">'+swapStripHtml(me)+'</div>';
+  h+='<div id="swap-sel-count" style="font-size:12px;color:#888;margin:6px 0"></div>';
   if(swapMode==='swap'){
-    h+='<div class="sq" style="margin-top:16px">3. When would you rather work? <span style="font-weight:400;color:#888;font-size:12px">(optional \u2014 narrows results)</span></div>'
-      +'<div class="sd">Leave blank to see swaps into any date (nearest first). Set a window to find trades into the dates you want.</div>'
+    h+='<div class="sq" style="margin-top:14px">3. When would you rather work? <span style="font-weight:400;color:#888;font-size:12px">(optional)</span></div>'
+      +'<div class="sd">Leave blank for any date (nearest first), or set a window to find trades into the dates you want.</div>'
       +'<div class="nr"><label>From</label><input type="date" id="swap-win-s" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
       +'<div class="nr"><label>To</label><input type="date" id="swap-win-e" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
       +'<button class="ft-btn" style="margin-top:6px" onclick="swapRunSwap()">\u2192 Find swaps</button>';
   } else {
-    h+='<button class="ft-btn" style="margin-top:14px" onclick="swapRunGive()">\u2192 Find takers</button>';
+    h+='<button class="ft-btn" style="margin-top:10px" onclick="swapRunGive()">\u2192 Find takers</button>';
   }
   h+='<div id="swap-run-result" style="margin-top:14px"></div>';
   box.innerHTML=h;
 }
 
-function swapToggleShift(cb){
-  const [d,s,site]=cb.value.split('|');
-  if(cb.checked) swapSelShifts.push({d,s,site});
-  else swapSelShifts=swapSelShifts.filter(x=>!(x.d===d&&x.s===s));
+function swapStripHtml(me){
+  const byDate={};
+  (swapSchedule.shifts||[]).filter(x=>x.p===me && SWAP_TRADE_TYPES.indexOf(x.s)>=0).forEach(x=>{ byDate[x.d]=x; });
+  const today=swapTodayStr();
+  const dows=['S','M','T','W','T','F','S'];
+  let h='<div style="border:1px solid #e5e5e2;border-radius:8px;overflow:hidden;font-size:11px">';
+  // header row
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);background:#f9f9f7;border-bottom:1px solid #e5e5e2">';
+  dows.forEach((d,i)=>{ h+='<div style="text-align:center;padding:4px 0;color:#aaa;font-weight:600'+((i===0||i===6)?';background:#f0f0ee':'')+'">'+d+'</div>'; });
+  h+='</div>';
+  for(let w=0; w<SWAP_WEEKS; w++){
+    h+='<div style="display:grid;grid-template-columns:repeat(7,1fr)">';
+    for(let dow=0; dow<7; dow++){
+      const dt=new Date(swapStripStart+'T12:00:00'); dt.setDate(dt.getDate()+w*7+dow);
+      const ds=dt.toISOString().slice(0,10);
+      const wknd=(dow===0||dow===6);
+      const past=ds<today;
+      const sh=byDate[ds];
+      let cell='<div style="min-height:40px;border:0.5px solid #f0f0ee;padding:2px'+(wknd?';background:#faf7f0':'')+(past?';opacity:0.35':'')+'">';
+      cell+='<div style="font-size:9px;color:#bbb;text-align:right">'+dt.getDate()+'</div>';
+      if(sh && !past){
+        const sel=swapSelShifts.some(x=>x.d===sh.d);
+        const col=swapTypeColor(sh.s);
+        cell+='<div onclick="swapTapShift(\''+sh.d+'\',\''+sh.s+'\',\''+(sh.site||'')+'\')" '
+          +'style="cursor:pointer;margin-top:1px;border-radius:4px;padding:2px 3px;text-align:center;font-weight:600;font-size:10px;'
+          +'background:'+(sel?col:'#fff')+';color:'+(sel?'#fff':col)+';border:1.5px solid '+col+'">'
+          +swapTypeAbbr(sh.s)+(sel?' \u2713':'')+'</div>';
+      } else if(sh && past){
+        cell+='<div style="margin-top:1px;border-radius:4px;padding:2px 3px;text-align:center;font-size:10px;color:#ccc;border:1px solid #eee">'+swapTypeAbbr(sh.s)+'</div>';
+      }
+      cell+='</div>';
+      h+=cell;
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  // month label(s)
+  const firstDt=new Date(swapStripStart+'T12:00:00');
+  const lastDt=new Date(swapStripStart+'T12:00:00'); lastDt.setDate(lastDt.getDate()+SWAP_WEEKS*7-1);
+  const mo=o=>o.toLocaleDateString(undefined,{month:'long',year:'numeric'});
+  const span=mo(firstDt)===mo(lastDt)?mo(firstDt):mo(firstDt)+' \u2013 '+mo(lastDt);
+  h='<div style="font-size:11px;color:#888;margin:4px 0 3px">'+span+'</div>'+h;
+  return h;
+}
+
+function swapTapShift(d,s,site){
+  const i=swapSelShifts.findIndex(x=>x.d===d&&x.s===s);
+  if(i>=0) swapSelShifts.splice(i,1); else swapSelShifts.push({d,s,site});
+  const me=document.getElementById('swap-me').value;
+  document.getElementById('swap-strip').innerHTML=swapStripHtml(me);
+  const n=swapSelShifts.length;
+  const cnt=document.getElementById('swap-sel-count');
+  if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1?' (block)':'')) : '';
 }
 
 // core: find swaps for ONE of my shifts
@@ -3485,6 +3542,7 @@ function swapFindFor(me,myShift,winS,winE,sameTypeOnly){
     if(!swapCanTake(x,myShift.d,myShift.s)) return;          // they take mine
     byPerson[x].forEach(theirs=>{
       if(theirs.d===myShift.d) return;
+      if(theirs.d<swapTodayStr()) return;
       if(winS && theirs.d<winS) return;
       if(winE && theirs.d>winE) return;
       const sameType = theirs.s===myShift.s;
@@ -3512,6 +3570,7 @@ function swapReturnSet(me,x,myBlock,winS,winE){
   const chosen=[];
   for(const t in need){
     let pool=(byPerson[t]||[]).filter(s=>{
+      if(s.d<swapTodayStr()) return false;
       if(winS&&s.d<winS) return false; if(winE&&s.d>winE) return false;
       if(myBlock.some(b=>b.d===s.d)) return false;
       return swapCanTake(me,s.d,s.s);
