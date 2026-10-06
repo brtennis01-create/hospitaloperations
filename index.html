@@ -3500,35 +3500,118 @@ function swapFindFor(me,myShift,winS,winE,sameTypeOnly){
   return ded;
 }
 
+function swapIsWknd(d){ const g=new Date(d+'T12:00:00Z').getUTCDay(); return g===0||g===6; }
+function swapShiftStr(s){ return swapTypeLabel(s.s)+(s.site?' '+s.site:'')+' \u00b7 '+swapFmtDate(s.d); }
+
+// For candidate X: find a return SET matching my block's type counts, that I can take.
+// Prefer weekend returns when my block has weekend shifts. Returns {set,wkndMatch} or null.
+function swapReturnSet(me,x,myBlock,winS,winE){
+  const byPerson={}; (swapSchedule.shifts||[]).forEach(s=>{ if(s.p===x && SWAP_TRADE_TYPES.indexOf(s.s)>=0) (byPerson[s.s]=byPerson[s.s]||[]).push(s); });
+  const need={}; myBlock.forEach(s=>need[s.s]=(need[s.s]||0)+1);
+  const myHasWknd=myBlock.some(b=>swapIsWknd(b.d));
+  const chosen=[];
+  for(const t in need){
+    let pool=(byPerson[t]||[]).filter(s=>{
+      if(winS&&s.d<winS) return false; if(winE&&s.d>winE) return false;
+      if(myBlock.some(b=>b.d===s.d)) return false;
+      return swapCanTake(me,s.d,s.s);
+    });
+    if(myHasWknd) pool.sort((a,b)=>(swapIsWknd(b.d)-swapIsWknd(a.d))||a.d.localeCompare(b.d));
+    else pool.sort((a,b)=>a.d.localeCompare(b.d));
+    if(pool.length<need[t]) return null;
+    chosen.push(...pool.slice(0,need[t]));
+  }
+  const myW=myBlock.filter(b=>swapIsWknd(b.d)).length, rW=chosen.filter(r=>swapIsWknd(r.d)).length;
+  return { set:chosen, wkndMatch: myW===rW };
+}
+// Find single-person block swaps: X takes my whole block AND returns a matching set.
+function swapBlockSwaps(me,myBlock,winS,winE){
+  const people=[...new Set((swapSchedule.shifts||[]).filter(s=>SWAP_TRADE_TYPES.indexOf(s.s)>=0).map(s=>s.p))];
+  const res=[];
+  people.forEach(x=>{
+    if(x===me) return;
+    if(!myBlock.every(b=>swapCanTake(x,b.d,b.s))) return;      // X takes my whole block
+    const ret=swapReturnSet(me,x,myBlock,winS,winE);
+    if(!ret) return;
+    const anchor=new Date(myBlock[0].d);
+    const avgApart=ret.set.reduce((a,r)=>a+Math.abs((new Date(r.d)-anchor)/86400000),0)/ret.set.length;
+    const sameSite=ret.set.every((r,i)=>r.site===(myBlock[i]?myBlock[i].site:r.site));
+    res.push({x,ret:ret.set,wkndMatch:ret.wkndMatch,avgApart,sameSite});
+  });
+  res.sort((a,b)=>(b.wkndMatch-a.wkndMatch)||(a.avgApart-b.avgApart)||(b.sameSite-a.sameSite));
+  return res;
+}
+
 function swapRunSwap(){
   const me=document.getElementById('swap-me').value;
   const out=document.getElementById('swap-run-result');
   if(!swapSelShifts.length){ out.innerHTML='<div class="res warn"><p>Check at least one shift to give up.</p></div>'; return; }
   const winS=document.getElementById('swap-win-s').value||null;
   const winE=document.getElementById('swap-win-e').value||null;
+  const block=swapSelShifts.slice().sort((a,b)=>a.d.localeCompare(b.d));
+  const multi=block.length>1;
   let html='';
-  swapSelShifts.forEach((my,mi)=>{
-    html+='<div class="sq" style="margin-top:'+(mi?16:4)+'px">Swaps for your '+swapTypeLabel(my.s)+(my.site?' '+my.site:'')+' on '+swapFmtDate(my.d)+'</div>';
-    let props=swapFindFor(me,my,winS,winE,true);
-    let crossNote='';
-    if(props.length<3){ // fallback to cross-type
-      const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType);
-      if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type options too (different shift type, bigger ask).</div>'; props=props.concat(cross); }
+
+  if(multi){
+    html+='<div class="sq" style="margin-top:4px">Block swap \u2014 '+block.length+' shifts</div>';
+    html+='<div class="nbox" style="margin-bottom:10px;font-size:12px"><strong>You give up:</strong><br>'+block.map(b=>'\u2022 '+swapShiftStr(b)+(swapIsWknd(b.d)?' <span style="color:#1a56db">(weekend)</span>':'')).join('<br>')+'</div>';
+    const combos=swapBlockSwaps(me,block,winS,winE);
+    if(combos.length){
+      html+='<div class="sd">'+combos.length+' colleague(s) can take your whole block and give back an equal set. Weekend-for-weekend ranked first.</div>';
+      combos.slice(0,7).forEach(cmb=>{
+        const retStr=cmb.ret.map((r,i)=>swapShiftStr(r)+(swapIsWknd(r.d)?' <span style="color:#1a56db">(wknd)</span>':'')).join('<br>');
+        const payload=encodeURIComponent(JSON.stringify({me,x:cmb.x,give:block,get:cmb.ret}));
+        html+='<div style="border:1px solid #e0e0de;border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+          +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">\u2194 '+swapName(cmb.x)+' <span style="color:#888;font-size:11px">('+cmb.x+')</span>'+(cmb.wkndMatch?' <span class="ft-confidence" style="background:#e8f0fe;color:#1a56db">weekend match</span>':'')+'</div>'
+          +'<div style="font-size:12px;color:#555;line-height:1.6"><strong>You take back:</strong><br>'+retStr+'</div>'
+          +'<button class="gbtn" style="margin:8px 0 0;padding:4px 12px;font-size:12px" onclick="swapDraftBlock(\''+payload+'\')">Draft message</button></div>';
+      });
+    } else {
+      html+='<div class="res warn" style="margin-bottom:10px"><h3>No single-person block swap found</h3><p>No one colleague can take all '+block.length+' shifts and give back an equal set'+((winS||winE)?' in that window':'')+'. Here are shift-by-shift options you could assemble from different people:</p></div>';
+      html+=swapPerShiftHtml(me,block,winS,winE);
     }
-    if(!props.length){ html+='<div class="ft-no-match">No valid swaps found'+((winS||winE)?' in that window \u2014 try widening the dates':'')+'. Both people have to be off and rested on each other\u2019s dates.</div>'; return; }
-    html+=crossNote;
-    props.slice(0,7).forEach((p,pi)=>{
-      const tag=p.sameType?'':' <span class="ft-confidence medium">cross-type</span>';
-      html+='<div style="border:1px solid #e0e0de;border-radius:8px;padding:10px 12px;margin-bottom:8px">'
-        +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">\u2194 '+swapName(p.x)+' <span style="color:#888;font-size:11px">('+p.x+')</span>'+tag+'</div>'
-        +'<div style="font-size:12px;color:#555;line-height:1.6">You give: '+swapTypeLabel(my.s)+(my.site?' '+my.site:'')+' \u00b7 '+swapFmtDate(my.d)+'<br>'
-        +'You take: '+swapTypeLabel(p.get.s)+(p.get.site?' '+p.get.site:'')+' \u00b7 '+swapFmtDate(p.get.d)+' <span style="color:#888">('+p.daysApart+'d away'+(p.sameSite?', same site':'')+')</span></div>'
-        +'<button class="gbtn" style="margin:8px 0 0;padding:4px 12px;font-size:12px" onclick="swapDraftTrade(\''+me+'\',\''+p.x+'\',\''+my.d+'\',\''+my.s+'\',\''+(my.site||'')+'\',\''+p.get.d+'\',\''+p.get.s+'\',\''+(p.get.site||'')+'\')">Draft message</button>'
-        +'</div>';
-    });
-  });
+  } else {
+    const my=block[0];
+    html+='<div class="sq" style="margin-top:4px">Swaps for your '+swapShiftStr(my)+'</div>';
+    html+=swapPerShiftHtml(me,[my],winS,winE);
+  }
   html+='<div id="swap-draft-out" style="margin-top:12px"></div>';
   out.innerHTML=html;
+}
+
+// per-shift proposal HTML (used for single shifts and as block fallback)
+function swapPerShiftHtml(me,shiftsArr,winS,winE){
+  let html='';
+  shiftsArr.forEach((my,mi)=>{
+    if(shiftsArr.length>1) html+='<div class="sq" style="margin-top:'+(mi?14:6)+'px;font-size:13px">For '+swapShiftStr(my)+'</div>';
+    let props=swapFindFor(me,my,winS,winE,true);
+    let crossNote='';
+    if(props.length<3){ const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType); if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type too (bigger ask).</div>'; props=props.concat(cross); } }
+    if(!props.length){ html+='<div class="ft-no-match">No valid swaps'+((winS||winE)?' in that window':'')+' for this shift.</div>'; return; }
+    html+=crossNote;
+    props.slice(0,7).forEach(p=>{
+      const tag=p.sameType?'':' <span class="ft-confidence medium">cross-type</span>';
+      const wk=swapIsWknd(p.get.d)&&swapIsWknd(my.d)?' <span class="ft-confidence" style="background:#e8f0fe;color:#1a56db">weekend match</span>':'';
+      html+='<div style="border:1px solid #e0e0de;border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+        +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">\u2194 '+swapName(p.x)+' <span style="color:#888;font-size:11px">('+p.x+')</span>'+tag+wk+'</div>'
+        +'<div style="font-size:12px;color:#555;line-height:1.6">You give: '+swapShiftStr(my)+'<br>You take: '+swapShiftStr(p.get)+' <span style="color:#888">('+p.daysApart+'d away'+(p.sameSite?', same site':'')+')</span></div>'
+        +'<button class="gbtn" style="margin:8px 0 0;padding:4px 12px;font-size:12px" onclick="swapDraftTrade(\''+me+'\',\''+p.x+'\',\''+my.d+'\',\''+my.s+'\',\''+(my.site||'')+'\',\''+p.get.d+'\',\''+p.get.s+'\',\''+(p.get.site||'')+'\')">Draft message</button></div>';
+    });
+  });
+  return html;
+}
+
+function swapDraftBlock(payload){
+  const d=JSON.parse(decodeURIComponent(payload));
+  const giveLines=d.give.map(s=>swapShiftStr(s)).join('; ');
+  const getLines=d.get.map(s=>swapShiftStr(s)).join('; ');
+  const msg='Hi '+swapName(d.x).split(' ')[0]+' \u2014 would you be up for a block swap? I\u2019d take your shifts ('+getLines+'), and you\u2019d take mine ('+giveLines+'). Looks like we\u2019re both clear on each other\u2019s dates. Thanks, '+swapName(d.me)+'. (If it works, we\u2019ll enter the trades in Amion.)';
+  const out=document.getElementById('swap-draft-out');
+  out.innerHTML='<div class="res info"><h3>Draft message to '+swapName(d.x)+'</h3>'
+    +'<textarea id="swap-draft-text" rows="5" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin:6px 0">'+msg+'</textarea>'
+    +'<button class="gbtn" style="margin:0" onclick="swapCopyDraft()">\ud83d\udccb Copy</button> <span id="swap-copy-msg" style="font-size:12px;color:#888;margin-left:6px"></span>'
+    +'<p style="font-size:11px;margin-top:8px">Edit as you like, copy, and send however you prefer.</p></div>';
+  out.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 
 // GIVE-AWAY: find people who can TAKE my shift (one-sided, no return). Rank by shift-type fit.
