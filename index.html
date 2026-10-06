@@ -3377,48 +3377,27 @@ function swapSaveStatus(){
 }
 
 
-// ===== SHIFT SWAPS (part 2: Find coverage — eligibility, ranking, draft message) =====
-let swapSchedule=null;        // cached snapshot {shifts,uploadedAt,...}
-let swapScheduleIdx=null;     // index: "p|d" -> [shift types]
-let swapStatusCache=null;     // provider status overrides
+// ===== SHIFT SWAPS (part 2 v2: swap finder — 1:1 trades + give-away) =====
+let swapSchedule=null, swapScheduleIdx=null, swapStatusCache=null;
+let swapSelShifts=[];   // shifts the user selected to give up
+let swapMode='swap';    // 'swap' | 'give'
+function swapSetMode(m){ if(swapMode===m) return; swapMode=m; swapSelShifts=[]; swapDrawFind(); }
 
-function swapBuildIndex(sched){
-  const idx={};
-  (sched.shifts||[]).forEach(x=>{ const k=x.p+'|'+x.d; (idx[k]=idx[k]||[]).push(x); });
-  return idx;
-}
-function swapShiftsOf(p,d){ const a=swapScheduleIdx&&swapScheduleIdx[p+'|'+d]; return a?a.map(x=>x.s):[]; }
-function swapDateShift(d,off){ const dt=new Date(d+'T12:00:00Z'); dt.setUTCDate(dt.getUTCDate()+off); return dt.toISOString().slice(0,10); }
-function swapEffStatus(code){
-  const base=SWAP_ROSTER[code]||{}, ov=(swapStatusCache&&swapStatusCache[code])||{};
-  return { tier: ov.tier||base.tier, primary: base.primary, secondary: base.secondary,
-           nightFav: ov.nightFav!==undefined?ov.nightFav:!!base.nightFav };
-}
+function swapBuildIndex(sched){ const idx={}; (sched.shifts||[]).forEach(x=>{const k=x.p+'|'+x.d;(idx[k]=idx[k]||[]).push(x);}); return idx; }
+function swapTypesOf(p,d){ const a=swapScheduleIdx&&swapScheduleIdx[p+'|'+d]; return a?a.map(x=>x.s):[]; }
+function swapDateShift(d,off){ const t=new Date(d+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+off); return t.toISOString().slice(0,10); }
+function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s; }
+function swapFmtDate(d){ const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
+const SWAP_TRADE_TYPES=['day','pm','hs'];
 
-// Eligibility: can CODE cover a shift of coverType on day D?
-function swapEligible(code,d,coverType){
-  if(swapShiftsOf(code,d).length>0) return {ok:false};                                  // free on D
-  if(swapShiftsOf(code,swapDateShift(d,-1)).indexOf('hs')>=0) return {ok:false};         // not post-night
-  if(coverType==='hs'){                                                                   // night needs clear runway both sides
-    if(swapShiftsOf(code,swapDateShift(d,-1)).length>0) return {ok:false};
-    if(swapShiftsOf(code,swapDateShift(d,1)).length>0) return {ok:false};
-  }
-  if(swapShiftsOf(code,swapDateShift(d,1)).indexOf('hs')>=0) return {ok:false};           // covering day/pm that abuts their next night
-  return {ok:true};
+// safety: can CODE take a shift of coverType on day D?
+function swapCanTake(code,d,coverType){
+  if(swapTypesOf(code,d).length>0) return false;
+  if(swapTypesOf(code,swapDateShift(d,-1)).indexOf('hs')>=0) return false;
+  if(coverType==='hs'){ if(swapTypesOf(code,swapDateShift(d,-1)).length>0) return false; if(swapTypesOf(code,swapDateShift(d,1)).length>0) return false; }
+  if(swapTypesOf(code,swapDateShift(d,1)).indexOf('hs')>=0) return false;
+  return true;
 }
-// Fit score 3=Likely 2=Worth asking 1=Possible 0=Ask if stuck
-function swapFit(code,coverType){
-  const r=swapEffStatus(code);
-  const prim=(r.primary||'').split(','), sec=(r.secondary||'').split(',');
-  if(r.tier==='flexible'){ if(coverType==='hs'&&r.nightFav) return 2; return 1; }
-  if(prim.indexOf(coverType)>=0) return 3;
-  if(sec.indexOf(coverType)>=0) return 2;
-  if(r.tier==='moonlighter') return 1;
-  if(r.tier==='pmhs'&&coverType==='day') return 0;
-  return 0;
-}
-function swapFitLabel(s){ return s>=3?'Likely':s===2?'Worth asking':s===1?'Possible':'Ask if stuck'; }
-function swapFitClass(s){ return s>=3?'primary':s===2?'specialty':'warn'; }
 
 function swapStaleBanner(){
   if(!swapSchedule) return '';
@@ -3432,7 +3411,6 @@ function swapStaleBanner(){
 function renderSwapFind(){
   const c=document.getElementById('swap-find'); if(!c) return;
   c.innerHTML='<div class="ft-no-match" style="color:#1a56db">Loading schedule\u2026</div>';
-  // load schedule + status together
   Promise.all([
     fetch('/api/swaps?key=schedule').then(r=>r.json()).catch(()=>({})),
     fetch('/api/swaps?key=status').then(r=>r.json()).catch(()=>({}))
@@ -3440,6 +3418,7 @@ function renderSwapFind(){
     swapSchedule=(sch&&sch.data)||null;
     swapScheduleIdx=swapSchedule?swapBuildIndex(swapSchedule):null;
     swapStatusCache=(st&&st.data)||{};
+    swapSelShifts=[];
     swapDrawFind();
   });
 }
@@ -3448,94 +3427,168 @@ function swapDrawFind(){
   const c=document.getElementById('swap-find');
   if(!swapSchedule){ c.innerHTML='<div class="res warn"><h3>No schedule loaded</h3><p>A scheduler needs to upload the current schedule first (Scheduler area tab).</p></div>'; return; }
   let html=swapStaleBanner();
-  html+='<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udd0d Find coverage for a shift</h3><p>Pick the shift you need covered. The tool shows colleagues who are off and rested that day, ranked by how likely they are to say yes. <strong>Always confirm in Amion before finalizing any trade.</strong></p></div>';
-  // mode toggle
   html+='<div style="display:flex;gap:0;margin-bottom:14px;border:1px solid #ddd;border-radius:8px;overflow:hidden;width:fit-content">'
-    +'<button id="swapmode-mine" onclick="swapSetMode(\'mine\')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#1a56db;color:#fff;cursor:pointer">Pick from my shifts</button>'
-    +'<button id="swapmode-manual" onclick="swapSetMode(\'manual\')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:#fff;color:#888;cursor:pointer;border-left:1px solid #ddd">Enter shift manually</button></div>';
-  // mine mode
-  html+='<div id="swap-mode-mine">'
-    +'<div class="nr"><label>Your name</label><select id="swap-me" onchange="swapLoadMyShifts()" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none"><option value="">Select your name\u2026</option>'
-    +SWAP_CODES.map(c=>'<option value="'+c+'">'+swapName(c)+'</option>').join('')+'</select></div>'
-    +'<div id="swap-my-shifts"></div></div>';
-  // manual mode
-  html+='<div id="swap-mode-manual" style="display:none">'
-    +'<div class="nr"><label>Your name</label><select id="swap-me2" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none"><option value="">Select your name\u2026</option>'
-    +SWAP_CODES.map(c=>'<option value="'+c+'">'+swapName(c)+'</option>').join('')+'</select></div>'
-    +'<div class="nr"><label>Date</label><input type="date" id="swap-mdate" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
-    +'<div class="nr"><label>Shift type</label><select id="swap-mtype" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"><option value="day">Day</option><option value="pm">PM</option><option value="hs">HS (night)</option></select></div>'
-    +'<div class="nr"><label>Site</label><select id="swap-msite" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"><option value="Green">Green</option><option value="Memorial">Memorial</option></select></div>'
-    +'<button class="ft-btn" onclick="swapFindManual()">\u2192 Find coverage</button></div>';
-  html+='<div id="swap-find-result" style="margin-top:14px"></div>';
+    +'<button id="swapmode-swap" onclick="swapSetMode(\'swap\')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:'+(swapMode==='swap'?'#1a56db':'#fff')+';color:'+(swapMode==='swap'?'#fff':'#888')+';cursor:pointer">\ud83d\udd01 Swap a shift</button>'
+    +'<button id="swapmode-give" onclick="swapSetMode(\'give\')" style="padding:7px 16px;font-size:12px;font-weight:600;font-family:inherit;border:none;background:'+(swapMode==='give'?'#1a56db':'#fff')+';color:'+(swapMode==='give'?'#fff':'#888')+';cursor:pointer;border-left:1px solid #ddd">\ud83c\udd93 Give away a shift</button></div>';
+  if(swapMode==='swap') html+='<div class="res info" style="margin-bottom:14px"><h3>\ud83d\udd01 Find a swap</h3><p>Pick the shift(s) you need to get rid of. The tool finds 1:1 trades \u2014 someone takes your shift and you take one of theirs, with both of you rested and clear. <strong>Always confirm in Amion before finalizing.</strong></p></div>';
+  else html+='<div class="res info" style="margin-bottom:14px"><h3>\ud83c\udd93 Give away a shift</h3><p>Over-scheduled? Pick the shift(s) you want to give away. The tool finds colleagues who are off and rested that day and could take it \u2014 no trade back required. <strong>Always confirm in Amion before finalizing.</strong></p></div>';
+  html+='<div class="sq">1. Your name</div>'
+    +'<div class="nr"><label>Provider</label><select id="swap-me" onchange="swapPickName()" style="flex:1;padding:7px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit;background:#fff;outline:none"><option value="">Select your name\u2026</option>'
+    +SWAP_CODES.map(c=>'<option value="'+c+'">'+swapName(c)+'</option>').join('')+'</select></div>';
+  html+='<div id="swap-myshifts"></div>';
   c.innerHTML=html;
 }
 
-function swapSetMode(m){
-  document.getElementById('swap-mode-mine').style.display = m==='mine'?'block':'none';
-  document.getElementById('swap-mode-manual').style.display = m==='manual'?'block':'none';
-  const mi=document.getElementById('swapmode-mine'), ma=document.getElementById('swapmode-manual');
-  mi.style.background=m==='mine'?'#1a56db':'#fff'; mi.style.color=m==='mine'?'#fff':'#888';
-  ma.style.background=m==='manual'?'#1a56db':'#fff'; ma.style.color=m==='manual'?'#fff':'#888';
-  document.getElementById('swap-find-result').innerHTML='';
-}
-
-function swapLoadMyShifts(){
+function swapPickName(){
   const me=document.getElementById('swap-me').value;
-  const box=document.getElementById('swap-my-shifts');
-  document.getElementById('swap-find-result').innerHTML='';
+  const box=document.getElementById('swap-myshifts');
+  swapSelShifts=[];
   if(!me){ box.innerHTML=''; return; }
-  const mine=(swapSchedule.shifts||[]).filter(x=>x.p===me && ['day','pm','hs'].indexOf(x.s)>=0)
-    .sort((a,b)=>a.d.localeCompare(b.d));
-  if(!mine.length){ box.innerHTML='<div class="ft-no-match">No day/PM/HS shifts found for you in the current schedule.</div>'; return; }
-  let h='<div class="sd" style="margin-top:8px">Pick the shift you need covered:</div><div class="nbox" style="max-height:260px;overflow-y:auto">';
+  const mine=(swapSchedule.shifts||[]).filter(x=>x.p===me && SWAP_TRADE_TYPES.indexOf(x.s)>=0).sort((a,b)=>a.d.localeCompare(b.d));
+  if(!mine.length){ box.innerHTML='<div class="ft-no-match" style="margin-top:8px">No day/PM/HS shifts found for you in the current schedule.</div>'; return; }
+  let h='<div class="sq" style="margin-top:16px">2. Which shift(s) do you '+(swapMode==='give'?'want to give away':'need to give up')+'?</div><div class="sd">Check one or more'+(swapMode==='swap'?' (a block). Then set your options below.':' (a block).')+'</div>';
+  h+='<div class="nbox" style="max-height:220px;overflow-y:auto">';
   mine.forEach((x,i)=>{
-    h+='<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #f0f0ee;font-size:12px">'
-      +'<span>'+swapFmtDate(x.d)+' \u00b7 <strong>'+swapTypeLabel(x.s)+'</strong>'+(x.site?' \u00b7 '+x.site:'')+'</span>'
-      +'<button class="gbtn" style="margin:0;padding:3px 10px;font-size:11px" onclick="swapFindFor(\''+me+'\',\''+x.d+'\',\''+x.s+'\',\''+(x.site||'')+'\')">Find coverage \u2192</button></div>';
+    h+='<label style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #f0f0ee;font-size:12px;cursor:pointer">'
+      +'<input type="checkbox" value="'+x.d+'|'+x.s+'|'+(x.site||'')+'" onchange="swapToggleShift(this)" style="width:15px;height:15px">'
+      +'<span>'+swapFmtDate(x.d)+' \u00b7 <strong>'+swapTypeLabel(x.s)+'</strong>'+(x.site?' \u00b7 '+x.site:'')+'</span></label>';
   });
   h+='</div>';
+  if(swapMode==='swap'){
+    h+='<div class="sq" style="margin-top:16px">3. When would you rather work? <span style="font-weight:400;color:#888;font-size:12px">(optional \u2014 narrows results)</span></div>'
+      +'<div class="sd">Leave blank to see swaps into any date (nearest first). Set a window to find trades into the dates you want.</div>'
+      +'<div class="nr"><label>From</label><input type="date" id="swap-win-s" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
+      +'<div class="nr"><label>To</label><input type="date" id="swap-win-e" style="padding:6px 8px;border:1px solid #ddd;border-radius:7px;font-size:13px;font-family:inherit"></div>'
+      +'<button class="ft-btn" style="margin-top:6px" onclick="swapRunSwap()">\u2192 Find swaps</button>';
+  } else {
+    h+='<button class="ft-btn" style="margin-top:14px" onclick="swapRunGive()">\u2192 Find takers</button>';
+  }
+  h+='<div id="swap-run-result" style="margin-top:14px"></div>';
   box.innerHTML=h;
 }
 
-function swapFindManual(){
-  const me=document.getElementById('swap-me2').value;
-  const d=document.getElementById('swap-mdate').value;
-  const s=document.getElementById('swap-mtype').value;
-  const site=document.getElementById('swap-msite').value;
-  if(!me||!d){ document.getElementById('swap-find-result').innerHTML='<div class="res warn"><p>Pick your name and a date.</p></div>'; return; }
-  swapFindFor(me,d,s,site);
+function swapToggleShift(cb){
+  const [d,s,site]=cb.value.split('|');
+  if(cb.checked) swapSelShifts.push({d,s,site});
+  else swapSelShifts=swapSelShifts.filter(x=>!(x.d===d&&x.s===s));
 }
 
-function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s; }
-function swapFmtDate(d){ const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric',year:'numeric'}); }
+// core: find swaps for ONE of my shifts
+function swapFindFor(me,myShift,winS,winE,sameTypeOnly){
+  const out=[];
+  (swapSchedule.shifts||[]).forEach(()=>{}); // noop keep lints quiet
+  // build per-person tradeable shifts lazily from index keys isn't ideal; scan shifts once
+  const byPerson={};
+  (swapSchedule.shifts||[]).forEach(x=>{ if(SWAP_TRADE_TYPES.indexOf(x.s)>=0){(byPerson[x.p]=byPerson[x.p]||[]).push(x);} });
+  Object.keys(byPerson).forEach(x=>{
+    if(x===me) return;
+    if(!swapCanTake(x,myShift.d,myShift.s)) return;          // they take mine
+    byPerson[x].forEach(theirs=>{
+      if(theirs.d===myShift.d) return;
+      if(winS && theirs.d<winS) return;
+      if(winE && theirs.d>winE) return;
+      const sameType = theirs.s===myShift.s;
+      if(sameTypeOnly && !sameType) return;
+      if(!swapCanTake(me,theirs.d,theirs.s)) return;         // I take theirs
+      const daysApart=Math.abs((new Date(theirs.d)-new Date(myShift.d))/86400000);
+      out.push({x,give:myShift,get:theirs,sameType,daysApart,sameSite:theirs.site===myShift.site});
+    });
+  });
+  out.sort((a,b)=>(b.sameType-a.sameType)||(a.daysApart-b.daysApart)||(b.sameSite-a.sameSite));
+  // dedupe best-per-person
+  const seen=new Set(),ded=[]; out.forEach(p=>{ if(!seen.has(p.x)){seen.add(p.x);ded.push(p);} });
+  return ded;
+}
 
-function swapFindFor(me,d,coverType,site){
-  const out=document.getElementById('swap-find-result');
-  const cands=SWAP_CODES.filter(p=>p!==me)
-    .filter(p=>swapEligible(p,d,coverType).ok)
-    .map(p=>({p,score:swapFit(p,coverType)}))
-    .sort((a,b)=>b.score-a.score || swapName(a.p).localeCompare(swapName(b.p)));
-  let html='<div class="sq">Coverage for '+swapTypeLabel(coverType)+(site?' '+site:'')+' on '+swapFmtDate(d)+'</div>';
-  if(!cands.length){ out.innerHTML=html+'<div class="ft-no-match">No eligible, rested colleagues are free that day. You may need to widen options or contact the schedulers.</div>'; return; }
-  html+='<div class="sd">'+cands.length+' eligible (off that day + rested). Ranked by likelihood to say yes. Confirm in Amion before finalizing.</div>';
-  let lastScore=null;
-  cands.forEach(x=>{
-    if(x.score!==lastScore){
-      const lbl=swapFitLabel(x.score);
-      html+='<div style="font-size:11px;font-weight:600;color:#888;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.05em">'+lbl+'</div>';
-      lastScore=x.score;
+function swapRunSwap(){
+  const me=document.getElementById('swap-me').value;
+  const out=document.getElementById('swap-run-result');
+  if(!swapSelShifts.length){ out.innerHTML='<div class="res warn"><p>Check at least one shift to give up.</p></div>'; return; }
+  const winS=document.getElementById('swap-win-s').value||null;
+  const winE=document.getElementById('swap-win-e').value||null;
+  let html='';
+  swapSelShifts.forEach((my,mi)=>{
+    html+='<div class="sq" style="margin-top:'+(mi?16:4)+'px">Swaps for your '+swapTypeLabel(my.s)+(my.site?' '+my.site:'')+' on '+swapFmtDate(my.d)+'</div>';
+    let props=swapFindFor(me,my,winS,winE,true);
+    let crossNote='';
+    if(props.length<3){ // fallback to cross-type
+      const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType);
+      if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type options too (different shift type, bigger ask).</div>'; props=props.concat(cross); }
     }
-    const r=swapEffStatus(x.p);
-    html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border:1px solid #e0e0de;border-radius:8px;margin-bottom:6px">'
-      +'<span style="font-size:13px">'+swapName(x.p)+' <span style="color:#888;font-size:11px">('+x.p+' \u00b7 '+r.tier+(r.nightFav?', night-favorable':'')+')</span></span>'
-      +'<button class="gbtn" style="margin:0;padding:4px 12px;font-size:12px" onclick="swapDraft(\''+me+'\',\''+x.p+'\',\''+d+'\',\''+coverType+'\',\''+(site||'')+'\')">Draft message</button></div>';
+    if(!props.length){ html+='<div class="ft-no-match">No valid swaps found'+((winS||winE)?' in that window \u2014 try widening the dates':'')+'. Both people have to be off and rested on each other\u2019s dates.</div>'; return; }
+    html+=crossNote;
+    props.slice(0,7).forEach((p,pi)=>{
+      const tag=p.sameType?'':' <span class="ft-confidence medium">cross-type</span>';
+      html+='<div style="border:1px solid #e0e0de;border-radius:8px;padding:10px 12px;margin-bottom:8px">'
+        +'<div style="font-size:13px;font-weight:600;margin-bottom:4px">\u2194 '+swapName(p.x)+' <span style="color:#888;font-size:11px">('+p.x+')</span>'+tag+'</div>'
+        +'<div style="font-size:12px;color:#555;line-height:1.6">You give: '+swapTypeLabel(my.s)+(my.site?' '+my.site:'')+' \u00b7 '+swapFmtDate(my.d)+'<br>'
+        +'You take: '+swapTypeLabel(p.get.s)+(p.get.site?' '+p.get.site:'')+' \u00b7 '+swapFmtDate(p.get.d)+' <span style="color:#888">('+p.daysApart+'d away'+(p.sameSite?', same site':'')+')</span></div>'
+        +'<button class="gbtn" style="margin:8px 0 0;padding:4px 12px;font-size:12px" onclick="swapDraftTrade(\''+me+'\',\''+p.x+'\',\''+my.d+'\',\''+my.s+'\',\''+(my.site||'')+'\',\''+p.get.d+'\',\''+p.get.s+'\',\''+(p.get.site||'')+'\')">Draft message</button>'
+        +'</div>';
+    });
   });
   html+='<div id="swap-draft-out" style="margin-top:12px"></div>';
   out.innerHTML=html;
 }
 
-function swapDraft(me,target,d,coverType,site){
-  const msg='Hi '+swapName(target).split(' ')[0]+' \u2014 I\u2019m looking for coverage for my '+swapTypeLabel(coverType)+(site?' '+site:'')+' shift on '+swapFmtDate(d)+'. Based on the schedule you\u2019re off that day \u2014 any chance you could cover it? Thanks, '+swapName(me)+'. (If yes, we\u2019ll enter the trade in Amion.)';
+// GIVE-AWAY: find people who can TAKE my shift (one-sided, no return). Rank by shift-type fit.
+function swapGiveFit(code,coverType){
+  const base=SWAP_ROSTER[code]||{}, ov=(swapStatusCache&&swapStatusCache[code])||{};
+  const tier=ov.tier||base.tier;
+  const nightFav=ov.nightFav!==undefined?ov.nightFav:!!base.nightFav;
+  const prim=(base.primary||'').split(','), sec=(base.secondary||'').split(',');
+  if(tier==='flexible'){ if(coverType==='hs'&&nightFav) return 2; return 1; }
+  if(prim.indexOf(coverType)>=0) return 3;
+  if(sec.indexOf(coverType)>=0) return 2;
+  if(tier==='moonlighter') return 1;
+  if(tier==='pmhs'&&coverType==='day') return 0;
+  return 0;
+}
+function swapGiveLabel(s){ return s>=3?'Likely':s===2?'Worth asking':s===1?'Possible':'Ask if stuck'; }
+function swapFindTakers(me,myShift){
+  return SWAP_CODES.filter(p=>p!==me)
+    .filter(p=>swapCanTake(p,myShift.d,myShift.s))
+    .map(p=>({p,score:swapGiveFit(p,myShift.s)}))
+    .sort((a,b)=>b.score-a.score || swapName(a.p).localeCompare(swapName(b.p)));
+}
+function swapRunGive(){
+  const me=document.getElementById('swap-me').value;
+  const out=document.getElementById('swap-run-result');
+  if(!swapSelShifts.length){ out.innerHTML='<div class="res warn"><p>Check at least one shift to give away.</p></div>'; return; }
+  let html='';
+  swapSelShifts.forEach((my,mi)=>{
+    html+='<div class="sq" style="margin-top:'+(mi?16:4)+'px">Takers for your '+swapTypeLabel(my.s)+(my.site?' '+my.site:'')+' on '+swapFmtDate(my.d)+'</div>';
+    const takers=swapFindTakers(me,my);
+    if(!takers.length){ html+='<div class="ft-no-match">No eligible, rested colleagues are free that day.</div>'; return; }
+    html+='<div class="sd">'+takers.length+' are off + rested that day, ranked by likelihood to take it.</div>';
+    let last=null;
+    takers.slice(0,7).forEach(t=>{
+      if(t.score!==last){ html+='<div style="font-size:11px;font-weight:600;color:#888;margin:10px 0 4px;text-transform:uppercase;letter-spacing:.05em">'+swapGiveLabel(t.score)+'</div>'; last=t.score; }
+      html+='<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border:1px solid #e0e0de;border-radius:8px;margin-bottom:6px">'
+        +'<span style="font-size:13px">'+swapName(t.p)+' <span style="color:#888;font-size:11px">('+t.p+')</span></span>'
+        +'<button class="gbtn" style="margin:0;padding:4px 12px;font-size:12px" onclick="swapDraftGive(\''+me+'\',\''+t.p+'\',\''+my.d+'\',\''+my.s+'\',\''+(my.site||'')+'\')">Draft message</button></div>';
+    });
+  });
+  html+='<div id="swap-draft-out" style="margin-top:12px"></div>';
+  out.innerHTML=html;
+}
+function swapDraftGive(me,target,gd,gs,gsite){
+  const myDate=new Date(gd+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+  const gl=swapTypeLabel(gs)+(gsite?' '+gsite:'');
+  const msg='Hi '+swapName(target).split(' ')[0]+' \u2014 I\u2019m over-scheduled and trying to give away my '+gl+' shift on '+myDate+'. Looks like you\u2019re off and clear that day \u2014 any chance you\u2019d be willing to take it? Thanks, '+swapName(me)+'. (If yes, we\u2019ll enter it in Amion.)';
+  const out=document.getElementById('swap-draft-out');
+  out.innerHTML='<div class="res info"><h3>Draft message to '+swapName(target)+'</h3>'
+    +'<textarea id="swap-draft-text" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin:6px 0">'+msg+'</textarea>'
+    +'<button class="gbtn" style="margin:0" onclick="swapCopyDraft()">\ud83d\udccb Copy</button> <span id="swap-copy-msg" style="font-size:12px;color:#888;margin-left:6px"></span>'
+    +'<p style="font-size:11px;margin-top:8px">Edit as you like, copy, and send however you prefer.</p></div>';
+  out.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function swapDraftTrade(me,target,gd,gs,gsite,td,ts,tsite){
+  const myDate=new Date(gd+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+  const theirDate=new Date(td+'T12:00:00').toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+  const gl=swapTypeLabel(gs)+(gsite?' '+gsite:''), tl=swapTypeLabel(ts)+(tsite?' '+tsite:'');
+  const msg='Hi '+swapName(target).split(' ')[0]+' \u2014 would you be up for a shift swap? I\u2019d take your '+tl+' on '+theirDate+', and you\u2019d take my '+gl+' on '+myDate+'. Looks like we\u2019re both clear on each other\u2019s dates. Thanks, '+swapName(me)+'. (If it works, we\u2019ll enter the trade in Amion.)';
   const out=document.getElementById('swap-draft-out');
   out.innerHTML='<div class="res info"><h3>Draft message to '+swapName(target)+'</h3>'
     +'<textarea id="swap-draft-text" rows="4" style="width:100%;padding:8px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical;margin:6px 0">'+msg+'</textarea>'
@@ -3545,8 +3598,7 @@ function swapDraft(me,target,d,coverType,site){
 }
 function swapCopyDraft(){
   const t=document.getElementById('swap-draft-text'), msg=document.getElementById('swap-copy-msg');
-  t.select();
-  const txt=t.value;
+  t.select(); const txt=t.value;
   if(navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>{if(msg)msg.textContent='Copied \u2713';}).catch(()=>{if(msg)msg.textContent='Select + copy manually';}); }
   else { try{document.execCommand('copy'); if(msg)msg.textContent='Copied \u2713';}catch(e){if(msg)msg.textContent='Select + copy manually';} }
 }
