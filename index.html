@@ -3386,13 +3386,14 @@ function swapSetMode(m){ if(swapMode===m) return; swapMode=m; swapSelShifts=[]; 
 function swapBuildIndex(sched){ const idx={}; (sched.shifts||[]).forEach(x=>{const k=x.p+'|'+x.d;(idx[k]=idx[k]||[]).push(x);}); return idx; }
 function swapTypesOf(p,d){ const a=swapScheduleIdx&&swapScheduleIdx[p+'|'+d]; return a?a.map(x=>x.s):[]; }
 function swapDateShift(d,off){ const t=new Date(d+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+off); return t.toISOString().slice(0,10); }
-function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s; }
+function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s==='jeop'?'Jeopardy':s; }
 function swapFmtDate(d){ const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
-const SWAP_TRADE_TYPES=['day','pm','hs'];
+const SWAP_TRADE_TYPES=['day','pm','hs','jeop'];
 
 // safety: can CODE take a shift of coverType on day D?
 function swapCanTake(code,d,coverType){
-  if(swapTypesOf(code,d).length>0) return false;
+  if(swapTypesOf(code,d).length>0) return false;              // must be free that day (all types)
+  if(coverType==='jeop') return true;                         // jeopardy = backup only; looser, no rest/adjacency rule
   if(swapTypesOf(code,swapDateShift(d,-1)).indexOf('hs')>=0) return false;
   if(coverType==='hs'){ if(swapTypesOf(code,swapDateShift(d,-1)).length>0) return false; if(swapTypesOf(code,swapDateShift(d,1)).length>0) return false; }
   if(swapTypesOf(code,swapDateShift(d,1)).indexOf('hs')>=0) return false;
@@ -3442,8 +3443,8 @@ function swapDrawFind(){
 var SWAP_WEEKS=6;           // how many weeks the strip shows
 var swapStripStart=null;    // Sunday of the first week shown
 function swapTodayStr(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
-function swapTypeColor(s){ return s==='day'?'#92D050':s==='pm'?'#00B0F0':s==='hs'?'#7030A0':'#bbb'; }
-function swapTypeAbbr(s){ return s==='day'?'Day':s==='pm'?'PM':s==='hs'?'HS':s; }
+function swapTypeColor(s){ return s==='day'?'#92D050':s==='pm'?'#00B0F0':s==='hs'?'#7030A0':s==='jeop'?'#FFC000':'#bbb'; }
+function swapTypeAbbr(s){ return s==='day'?'Day':s==='pm'?'PM':s==='hs'?'HS':s==='jeop'?'Jeop':s; }
 
 function swapPickName(){
   const me=document.getElementById('swap-me').value;
@@ -3459,7 +3460,7 @@ function swapPickName(){
     +'<div class="sd">Your upcoming shifts. Tap to select one or more (a block). '
     +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#92D050;margin:0 2px 0 6px"></span>Day</span>'
     +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#00B0F0;margin:0 2px 0 6px"></span>PM</span>'
-    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7030A0;margin:0 2px 0 6px"></span>HS</span></div>';
+    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7030A0;margin:0 2px 0 6px"></span>HS</span>'+'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#FFC000;margin:0 2px 0 6px"></span>Jeop</span></div>';
   h+='<div id="swap-strip">'+swapStripHtml(me)+'</div>';
   h+='<div id="swap-sel-count" style="font-size:12px;color:#888;margin:6px 0"></div>';
   if(swapMode==='swap'){
@@ -3534,12 +3535,22 @@ function swapStripHtml(me){
 
 function swapTapShift(d,s,site){
   const i=swapSelShifts.findIndex(x=>x.d===d&&x.s===s);
-  if(i>=0) swapSelShifts.splice(i,1); else swapSelShifts.push({d,s,site});
+  if(i>=0){ swapSelShifts.splice(i,1); }
+  else {
+    // jeopardy can't be mixed with other types (jeop swaps 1-for-1, jeop-only)
+    const selectingJeop = s==='jeop';
+    const haveJeop = swapSelShifts.some(x=>x.s==='jeop');
+    const haveOther = swapSelShifts.some(x=>x.s!=='jeop');
+    if(selectingJeop && haveOther) swapSelShifts=[];        // switching to jeop clears others
+    if(!selectingJeop && haveJeop) swapSelShifts=[];        // switching to non-jeop clears jeop
+    swapSelShifts.push({d,s,site});
+  }
   const me=document.getElementById('swap-me').value;
   document.getElementById('swap-strip').innerHTML=swapStripHtml(me);
   const n=swapSelShifts.length;
   const cnt=document.getElementById('swap-sel-count');
-  if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1?' (block)':'')) : '';
+  const isJ=swapSelShifts.some(x=>x.s==='jeop');
+  if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1&&!isJ?' (block)':'')+(isJ?' \u2014 jeopardy swaps 1-for-1':'')) : '';
 }
 function swapQuickWin(days){
   const s=document.getElementById('swap-win-s'), e=document.getElementById('swap-win-e');
@@ -3672,8 +3683,8 @@ function swapPerShiftHtml(me,shiftsArr,winS,winE){
     if(shiftsArr.length>1) html+='<div class="sq" style="margin-top:'+(mi?14:6)+'px;font-size:13px">For '+swapShiftStr(my)+'</div>';
     let props=swapFindFor(me,my,winS,winE,true);
     let crossNote='';
-    if(props.length<3){ const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType); if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type too (bigger ask).</div>'; props=props.concat(cross); } }
-    if(!props.length){ html+='<div class="ft-no-match">No valid swaps'+((winS||winE)?' in that window':'')+' for this shift.</div>'; return; }
+    if(my.s!=='jeop' && props.length<3){ const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType); if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type too (bigger ask).</div>'; props=props.concat(cross); } }
+    if(!props.length){ html+='<div class="ft-no-match">No valid '+(my.s==='jeop'?'jeopardy ':'')+'swaps'+((winS||winE)?' in that window':'')+' for this shift.</div>'; return; }
     html+=crossNote;
     props.slice(0,7).forEach(p=>{
       const tag=p.sameType?'':' <span class="ft-confidence medium">cross-type</span>';
