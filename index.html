@@ -170,6 +170,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-route" onclick="show('route')">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="19" cy="19" r="2"/><line x1="12" y1="7" x2="5" y2="17"/><line x1="12" y1="7" x2="19" y2="17"/></svg> Patient routing
     </div>
+    <div class="nav-item" id="nav-edadmit" onclick="show('edadmit')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Accept from ED?
+    </div>
     <div class="nav-item" id="nav-onboard" onclick="show('onboard')">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Onboarding
     </div>
@@ -759,6 +762,58 @@ Bedside rounding highly encouraged.</p></div>
       <div class="pfoot">⏰ Call-in window: 5:00 PM – 8:00 PM · Last admit 9:00 PM · Shift ends 10:00 PM</div>
     </div>
 
+    <!-- ACCEPT FROM ED (patient attribution) -->
+    <div class="panel" id="panel-edadmit">
+      <div class="ph"><h1>Accept this patient from the La Jolla ED?</h1><span class="badge-blue">Patient attribution · Draft 11/06/26</span></div>
+      <div class="sscroll">
+        <div class="res info" style="margin-bottom:14px"><h3>&#x2139;&#xFE0F; Attribution helper &mdash; Memorial / Prebys&ndash;La Jolla campus</h3><p>Check everything that applies to the patient, then press Check. This reflects the SCMG Hospital Medicine attribution guideline. Final attribution is always the admitting hospitalist's discretion, based on patient safety and the patient's best interest.</p></div>
+
+        <div class="sq">&#x2460; Exceptions &mdash; we do NOT serve as primary team</div>
+        <div class="sd">If any of these apply, the patient is not ours as primary (a subspecialty consult may still be appropriate).</div>
+        <div class="crow"><input type="checkbox" id="ex1"><label for="ex1">&ldquo;Pure CT&rdquo; surgery patient (pre-op or post-op)</label></div>
+        <div class="crow"><input type="checkbox" id="ex2"><label for="ex2">STEMI</label></div>
+        <div class="crow"><input type="checkbox" id="ex3"><label for="ex3">LVAD</label></div>
+        <div class="crow"><input type="checkbox" id="ex4"><label for="ex4">Pregnant, &#x2265; 20 weeks gestational age</label></div>
+        <div class="crow"><input type="checkbox" id="ex5"><label for="ex5">Postpartum, readmitted for a pregnancy-related complication</label></div>
+        <div class="crow"><input type="checkbox" id="bbx"><label for="bbx">Bounce-back previously managed predominantly by <b>Ximed</b> hospitalists</label></div>
+
+        <div class="sq" style="margin-top:16px">&#x2461; Do we serve this patient? &mdash; any one qualifies</div>
+        <div class="sd">Each item below is an independent reason the patient is attributed to our service.</div>
+        <div class="crow"><input type="checkbox" id="in1"><label for="in1">Has an <b>SCMG or Scripps Coastal</b> primary care physician (referred for admission or consult)</label></div>
+        <div class="crow"><input type="checkbox" id="in2"><label for="in2">Referred for admission or consult by an <b>SCMG subspecialist</b></label></div>
+        <div class="crow"><input type="checkbox" id="in2a"><label for="in2a">Has an SCMG subspecialist who <b>will be actively involved</b> in the hospitalization</label></div>
+        <div class="crow"><input type="checkbox" id="in3"><label for="in3">Called out of the ICU by the <b>SCMG trauma team</b></label></div>
+        <div class="crow"><input type="checkbox" id="in4"><label for="in4">Called out of the ICU by the <b>SCMG ICU or Ximed ICU team</b> AND has an SCMG PCP or a pertinent SCMG subspecialist</label></div>
+        <div class="crow"><input type="checkbox" id="in5"><label for="in5">Referred by <b>SCMG TACS / trauma surgeons</b> for consult or admission</label></div>
+        <div class="crow"><input type="checkbox" id="in6"><label for="in6">Transferred from a <b>Scripps Clinic urgent care</b> facility</label></div>
+        <div class="crow"><input type="checkbox" id="in7"><label for="in7">Transferred from <b>Scripps Green Hospital</b></label></div>
+        <div class="crow"><input type="checkbox" id="bbs"><label for="bbs">Bounce-back previously managed predominantly by <b>SCMG</b> hospitalists</label></div>
+
+        <button class="gbtn" style="margin-top:6px" onclick="edCheck()">Check attribution &#x2197;</button>
+        <div id="edres" style="margin-top:12px"></div>
+        <button class="reset-btn" style="margin-top:10px" onclick="edReset()">&#x21BA; Clear</button>
+
+        <details style="margin-top:20px">
+          <summary style="cursor:pointer;font-weight:600;font-size:13px;color:#1a3a7a;padding:6px 0">View full guideline (Patient Attribution &mdash; La Jolla, Draft 11/06/2026)</summary>
+          <div class="nbox" style="margin-top:8px;line-height:1.8">
+            <strong>Patients we serve</strong> &mdash; SCMG Hospital Medicine at the La Jolla campus currently serves:<br>
+            1. All patients referred for admission or consultation who have SCMG or Scripps Coastal PCPs, regardless of subspecialist group affiliation.<br>
+            2. All patients referred for admission or consultation by SCMG subspecialists, regardless of primary care affiliation.<br>
+            &nbsp;&nbsp;a. All patients that have an SCMG subspecialist who will be actively involved in the hospitalization, regardless of primary care affiliation.<br>
+            3. All patients called out of the ICU by the SCMG trauma team, regardless of PCP or subspecialist affiliation.<br>
+            4. All patients called out of the ICU by the SCMG ICU team or Ximed ICU team, if the patient has an SCMG primary care MD or an SCMG subspecialist pertinent to the active medical issue.<br>
+            5. All patients referred by SCMG TACS/trauma surgeons for consultation or admission, regardless of PCP affiliation.<br>
+            6. All patients transferred from Scripps Clinic urgent care facilities.<br>
+            7. All patients transferred from Scripps Green Hospital.<br><br>
+            <strong>Exceptions</strong> &mdash; we do NOT formally serve as primary team for: &ldquo;Pure CT&rdquo; surgery (pre-op or post-op); STEMI; LVAD; pregnant patients at 20 weeks or older gestational age; postpartum patients readmitted for pregnancy-related complications.<br><br>
+            <strong>Bounce-backs</strong> &mdash; patients previously managed predominantly by SCMG hospitalists are attributed to SCMG hospitalists; patients previously managed predominantly by Ximed hospitalists go to Ximed.<br><br>
+            <strong>Final decisions</strong> &mdash; all final decisions regarding patient attribution are deferred to the discretion of the admitting hospitalist, based on patient safety and the patient's best interest.
+          </div>
+        </details>
+      </div>
+      <div class="pfoot">Decision support only &middot; final attribution is the admitting hospitalist's call</div>
+    </div>
+
   </div>
 </div>
 <script>
@@ -767,7 +822,7 @@ const API_KEY = 'proxy';  // API calls go through secure server proxy
 
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','onboard','help','sched','resident','flex','vac','swap'].forEach(n => {
+  ['qa','day','pm','route','edadmit','onboard','help','sched','resident','flex','vac','swap'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
@@ -778,6 +833,31 @@ function show(name) {
   if (name==='flex') initFlex();
   if (name==='vac') initVac();
     if (name==='swap') initSwap();
+}
+
+// ── ACCEPT FROM ED — patient attribution ──
+function edCheck(){
+  const ck=id=>{const e=document.getElementById(id);return e&&e.checked;};
+  const exMap=[['ex1','“Pure CT” surgery (pre-/post-op)'],['ex2','STEMI'],['ex3','LVAD'],['ex4','Pregnant ≥ 20 weeks gestation'],['ex5','Postpartum readmit for a pregnancy-related complication']];
+  const ex=exMap.filter(x=>ck(x[0])).map(x=>x[1]);
+  const ximed=ck('bbx');
+  const inMap=[['in1','SCMG or Scripps Coastal PCP'],['in2','referred by an SCMG subspecialist'],['in2a','has an SCMG subspecialist who will be actively involved'],['in3','called out of ICU by the SCMG trauma team'],['in4','called out of ICU by SCMG/Ximed ICU team with an SCMG PCP or pertinent SCMG subspecialist'],['in5','referred by SCMG TACS/trauma surgeons'],['in6','transferred from a Scripps Clinic urgent care'],['in7','transferred from Scripps Green Hospital'],['bbs','bounce-back previously managed predominantly by SCMG']];
+  const inc=inMap.filter(x=>ck(x[0])).map(x=>x[1]);
+  const el=document.getElementById('edres'); let html;
+  if(ex.length){
+    html=`<div class="res no"><h3>✗ Not ours as primary team</h3><p>Named carve-out: ${ex.join('; ')}.\n\nSCMG Hospital Medicine does not formally serve as primary team for this. A subspecialty consult may still be appropriate — confirm the admitting service with the ED.${inc.length?`\n\nNote: an inclusion criterion also applies (${inc.join('; ')}), but the exception governs the primary-team question.`:''}</p></div>`;
+  } else if(ximed){
+    html=`<div class="res no"><h3>✗ Attributed to Ximed (bounce-back)</h3><p>Patients previously managed predominantly by Ximed hospitalists are attributed to Ximed.${inc.length?` Even with an inclusion criterion checked, bounce-back attribution follows the prior managing group.`:''}</p></div>`;
+  } else if(inc.length){
+    html=`<div class="res yes"><h3>✓ Ours — attributed to SCMG Hospital Medicine</h3><p>Qualifies because: ${inc.join('; ')}.\n\nAccept under the hospitalist service. The final decision remains the admitting hospitalist's discretion, based on patient safety and the patient's best interest.</p></div>`;
+  } else {
+    html=`<div class="res warn"><h3>⚠ Not clearly ours — clarify first</h3><p>Nothing is checked, so this patient does not clearly fall to our service under the guideline.\n\nConfirm the patient's PCP, any SCMG subspecialist who will be involved, and the referral source with the ED before accepting. The final decision is the admitting hospitalist's discretion.</p></div>`;
+  }
+  el.innerHTML=html; el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function edReset(){
+  ['ex1','ex2','ex3','ex4','ex5','bbx','in1','in2','in2a','in3','in4','in5','in6','in7','bbs'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
+  const r=document.getElementById('edres'); if(r) r.innerHTML='';
 }
 
 function switchSchTab(tab) {
