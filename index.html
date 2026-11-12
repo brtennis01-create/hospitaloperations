@@ -996,6 +996,17 @@ DAILY NUMBERS TRACKING:
 - PM and HS hospitalists receive daily reminder email from Ericka to enter numbers.
 - On-call hospitalist enters total starting patient number into Teams Excel by 8am daily.
 
+WORKING WITH XIMED (CROSS-GROUP ADMISSION ASSISTANCE):
+Guidelines for when Ximed (the other hospitalist group at Scripps La Jolla) requests admission help from SCMG, to ensure safe, fair, consistent collaboration.
+- Direct physician-to-physician only: A request for admission assistance must come directly from the requesting Ximed hospitalist to the SCMG hospitalist being asked.
+- Requests from anyone else: If the request comes from the transfer center, ED, nurse manager, operations supervisor, or anyone other than the requesting hospitalist, kindly explain that all requests for assistance must come directly from the hospitalist.
+- Assess the workload: You may ask the requesting hospitalist how many admissions their group has at the time. Consider your own current workload and capacity before agreeing to help.
+- Patient safety comes first: You are NOT obligated to accept additional admissions if you are busy or believe it would compromise safe care of your patients. Do not accept more admissions than you can safely manage.
+- One admission at a time: If you agree to help, accept only ONE admission at a time. Tell the requesting hospitalist you will check back in when you have caught up and are available to consider more.
+- Resolving disagreements: If the two hospitalists cannot agree on the need for or extent of assistance, Ximed should contact their group leads Bruce Covner or Grace Joo to help resolve it. Also notify Farhad Shadan (858-752-2913), or whoever is covering him, so he is prepared to discuss if contacted.
+- If BOTH groups are truly capped: Each service continues triaging and accepting its own patients, since help from the other group is not available at that time. (SCMG has procedures to try to meet evening surge demand, but sustainability likely depends on additional funding support.)
+- Documentation is REQUIRED: Whenever asked to provide admission assistance, document the request in the Excel spreadsheet used to track our numbers. Record: (1) "Yes" that you were requested to help; (2) the number of admissions OUR (SCMG) group had when contacted; (3) the number of admissions the REQUESTING (Ximed) group had when contacted.
+
 AMION:
 - Website where you find which hospitalists are on for the day and where the call schedule is found.`;
 
@@ -1775,7 +1786,6 @@ function renderDay(){
     <div class="rbox"><strong>Before entering census, exclude:</strong><br>• ICU patients (unless called out and actively followed by the hospitalist service)</div>
     <div class="nr"><label>Hospitalists on service</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 7"></div>
     <div class="nr"><label>Eligible census (after exclusion)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 97"></div>
-    <div class="nr"><label>Today's date</label><input type="date" id="d-date" value="${new Date().toISOString().split('T')[0]}"></div>
     <button class="gbtn" onclick="submitMemorial()">Continue ↗</button>`;
     return;
   }
@@ -1783,7 +1793,7 @@ function renderDay(){
     const {adj,adjLabel,threshold}=getMemAdj();
     c.innerHTML=`<p class="sq">Verify prerequisites</p>
     <p class="sd">All three must be confirmed before surge can activate at Scripps Memorial.</p>
-    <div class="mbox">Resident adjustment: −${adj} (${adjLabel})\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\nYour eligible census: ${dS.census}</div>
+    <div class="mbox">Teaching-site deduction: −${adj}\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\nYour eligible census: ${dS.census}</div>
     <div class="crow"><input type="checkbox" id="c1"><label for="c1">All non-teaching teams have at least 12 patients</label></div>
     <div class="crow"><input type="checkbox" id="c2"><label for="c2">All resident services have been backfilled to maximum capacity</label></div>
     <div class="crow"><input type="checkbox" id="c3"><label for="c3">Scripps Green does NOT currently require surge</label></div>
@@ -1797,8 +1807,8 @@ function renderDay(){
       threshold=eligibleHosp*14; can=dS.census>=threshold;
       math=`Hospitalists on service (total): ${dS.hosp}\n− Red Team hospitalist: 1 (always excluded)\nEligible hospitalists: ${eligibleHosp}\nEligible census (excl. ICU, Red Team, new ortho): ${dS.census}\n\nSurge threshold: ${eligibleHosp} × 14 = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
     } else {
-      const {adj,adjLabel}=getMemAdj(); threshold=(dS.hosp*14)-adj; can=dS.census>=threshold;
-      math=`Hospitalists on service: ${dS.hosp}\nEligible census (excl. ICU not actively followed): ${dS.census}\n\nResident adjustment: −${adj} (${adjLabel})\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
+      const {adj}=getMemAdj(); threshold=(dS.hosp*14)-adj; can=dS.census>=threshold;
+      math=`Hospitalists on service: ${dS.hosp}\nEligible census (excl. ICU not actively followed): ${dS.census}\n\nTeaching-site deduction: −${adj}\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
     }
     c.innerHTML=`<div class="res ${can?'yes':'no'}"><h3>${can?'✓ Surge may be activated':'✗ Surge criteria not met'}</h3>
     <p>${can?'All criteria are met. Contact the surge hospitalist and prepare the patient list. Must call in before 8:00 AM.':'The eligible census does not meet the surge threshold. Continue monitoring.'}</p></div>
@@ -1808,10 +1818,8 @@ function renderDay(){
   }
 }
 function getMemAdj(){
-  const d=new Date(dS.date),yr=d.getFullYear();
-  const s=new Date(`${yr}-06-16`),e=new Date(`${yr}-08-10`);
-  const adj=(d>=s&&d<=e)?3:2;
-  return {adj,adjLabel:adj===3?'baby caps: June 16–Aug 10':'standard: Aug 11–June 15',threshold:(dS.hosp*14)-adj};
+  const adj=5; // teaching-site deduction (baby caps retired)
+  return {adj,adjLabel:'teaching site',threshold:(dS.hosp*14)-adj};
 }
 function submitGreen(){
   const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
@@ -1821,7 +1829,7 @@ function submitGreen(){
 function submitMemorial(){
   const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
   if(!h||!c){alert('Please fill in all fields.');return;}
-  dS.hosp=h;dS.census=c;dS.date=document.getElementById('d-date').value;dS.step=2;renderDay();
+  dS.hosp=h;dS.census=c;dS.step=2;renderDay();
 }
 function checkPrereqs(){
   const ok=document.getElementById('c1').checked&&document.getElementById('c2').checked&&document.getElementById('c3').checked;
@@ -3386,13 +3394,14 @@ function swapSetMode(m){ if(swapMode===m) return; swapMode=m; swapSelShifts=[]; 
 function swapBuildIndex(sched){ const idx={}; (sched.shifts||[]).forEach(x=>{const k=x.p+'|'+x.d;(idx[k]=idx[k]||[]).push(x);}); return idx; }
 function swapTypesOf(p,d){ const a=swapScheduleIdx&&swapScheduleIdx[p+'|'+d]; return a?a.map(x=>x.s):[]; }
 function swapDateShift(d,off){ const t=new Date(d+'T12:00:00Z'); t.setUTCDate(t.getUTCDate()+off); return t.toISOString().slice(0,10); }
-function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s; }
+function swapTypeLabel(s){ return s==='hs'?'HS (night)':s==='pm'?'PM':s==='day'?'Day':s==='jeop'?'Jeopardy':s; }
 function swapFmtDate(d){ const dt=new Date(d+'T12:00:00'); return dt.toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'}); }
-const SWAP_TRADE_TYPES=['day','pm','hs'];
+const SWAP_TRADE_TYPES=['day','pm','hs','jeop'];
 
 // safety: can CODE take a shift of coverType on day D?
 function swapCanTake(code,d,coverType){
-  if(swapTypesOf(code,d).length>0) return false;
+  if(swapTypesOf(code,d).length>0) return false;              // must be free that day (all types)
+  if(coverType==='jeop') return true;                         // jeopardy = backup only; looser, no rest/adjacency rule
   if(swapTypesOf(code,swapDateShift(d,-1)).indexOf('hs')>=0) return false;
   if(coverType==='hs'){ if(swapTypesOf(code,swapDateShift(d,-1)).length>0) return false; if(swapTypesOf(code,swapDateShift(d,1)).length>0) return false; }
   if(swapTypesOf(code,swapDateShift(d,1)).indexOf('hs')>=0) return false;
@@ -3442,8 +3451,8 @@ function swapDrawFind(){
 var SWAP_WEEKS=6;           // how many weeks the strip shows
 var swapStripStart=null;    // Sunday of the first week shown
 function swapTodayStr(){ const n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0'); }
-function swapTypeColor(s){ return s==='day'?'#92D050':s==='pm'?'#00B0F0':s==='hs'?'#7030A0':'#bbb'; }
-function swapTypeAbbr(s){ return s==='day'?'Day':s==='pm'?'PM':s==='hs'?'HS':s; }
+function swapTypeColor(s){ return s==='day'?'#92D050':s==='pm'?'#00B0F0':s==='hs'?'#7030A0':s==='jeop'?'#FFC000':'#bbb'; }
+function swapTypeAbbr(s){ return s==='day'?'Day':s==='pm'?'PM':s==='hs'?'HS':s==='jeop'?'Jeop':s; }
 
 function swapPickName(){
   const me=document.getElementById('swap-me').value;
@@ -3459,7 +3468,7 @@ function swapPickName(){
     +'<div class="sd">Your upcoming shifts. Tap to select one or more (a block). '
     +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#92D050;margin:0 2px 0 6px"></span>Day</span>'
     +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#00B0F0;margin:0 2px 0 6px"></span>PM</span>'
-    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7030A0;margin:0 2px 0 6px"></span>HS</span></div>';
+    +'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#7030A0;margin:0 2px 0 6px"></span>HS</span>'+'<span style="white-space:nowrap"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:#FFC000;margin:0 2px 0 6px"></span>Jeop</span></div>';
   h+='<div id="swap-strip">'+swapStripHtml(me)+'</div>';
   h+='<div id="swap-sel-count" style="font-size:12px;color:#888;margin:6px 0"></div>';
   if(swapMode==='swap'){
@@ -3534,12 +3543,22 @@ function swapStripHtml(me){
 
 function swapTapShift(d,s,site){
   const i=swapSelShifts.findIndex(x=>x.d===d&&x.s===s);
-  if(i>=0) swapSelShifts.splice(i,1); else swapSelShifts.push({d,s,site});
+  if(i>=0){ swapSelShifts.splice(i,1); }
+  else {
+    // jeopardy can't be mixed with other types (jeop swaps 1-for-1, jeop-only)
+    const selectingJeop = s==='jeop';
+    const haveJeop = swapSelShifts.some(x=>x.s==='jeop');
+    const haveOther = swapSelShifts.some(x=>x.s!=='jeop');
+    if(selectingJeop && haveOther) swapSelShifts=[];        // switching to jeop clears others
+    if(!selectingJeop && haveJeop) swapSelShifts=[];        // switching to non-jeop clears jeop
+    swapSelShifts.push({d,s,site});
+  }
   const me=document.getElementById('swap-me').value;
   document.getElementById('swap-strip').innerHTML=swapStripHtml(me);
   const n=swapSelShifts.length;
   const cnt=document.getElementById('swap-sel-count');
-  if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1?' (block)':'')) : '';
+  const isJ=swapSelShifts.some(x=>x.s==='jeop');
+  if(cnt) cnt.textContent = n? (n+' shift'+(n>1?'s':'')+' selected'+(n>1&&!isJ?' (block)':'')+(isJ?' \u2014 jeopardy swaps 1-for-1':'')) : '';
 }
 function swapQuickWin(days){
   const s=document.getElementById('swap-win-s'), e=document.getElementById('swap-win-e');
@@ -3672,8 +3691,8 @@ function swapPerShiftHtml(me,shiftsArr,winS,winE){
     if(shiftsArr.length>1) html+='<div class="sq" style="margin-top:'+(mi?14:6)+'px;font-size:13px">For '+swapShiftStr(my)+'</div>';
     let props=swapFindFor(me,my,winS,winE,true);
     let crossNote='';
-    if(props.length<3){ const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType); if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type too (bigger ask).</div>'; props=props.concat(cross); } }
-    if(!props.length){ html+='<div class="ft-no-match">No valid swaps'+((winS||winE)?' in that window':'')+' for this shift.</div>'; return; }
+    if(my.s!=='jeop' && props.length<3){ const cross=swapFindFor(me,my,winS,winE,false).filter(p=>!p.sameType); if(cross.length){ crossNote='<div class="sd" style="color:#78350f">Few same-type matches \u2014 showing cross-type too (bigger ask).</div>'; props=props.concat(cross); } }
+    if(!props.length){ html+='<div class="ft-no-match">No valid '+(my.s==='jeop'?'jeopardy ':'')+'swaps'+((winS||winE)?' in that window':'')+' for this shift.</div>'; return; }
     html+=crossNote;
     props.slice(0,7).forEach(p=>{
       const tag=p.sameType?'':' <span class="ft-confidence medium">cross-type</span>';
