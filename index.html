@@ -173,6 +173,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
     <div class="nav-item" id="nav-edadmit" onclick="show('edadmit')">
       <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg> Accept from ED?
     </div>
+    <div class="nav-item" id="nav-switch" onclick="show('switch')" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M16 3h5v5"/><path d="M21 3l-7 7"/><path d="M8 21H3v-5"/><path d="M3 21l7-7"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/></svg> Site switch (12/15)
+    </div>
+    <div class="nav-item" id="nav-overnight" onclick="show('overnight')" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg> Overnight coverage
+    </div>
     <div class="nav-item" id="nav-onboard" onclick="show('onboard')">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Onboarding
     </div>
@@ -814,15 +820,143 @@ Bedside rounding highly encouraged.</p></div>
       <div class="pfoot">Decision support only &middot; final attribution is the admitting hospitalist's call</div>
     </div>
 
+    <!-- SITE SWITCH (12/15/26) — gated reference -->
+    <div class="panel" id="panel-switch">
+      <div class="ph"><h1>Site switch &mdash; operational changes</h1><span class="badge-blue">In effect 12/15/26</span></div>
+      <div class="sscroll">
+        <div class="res info" style="margin-bottom:14px"><h3>&#x1F504; Teaching moved to Green on 12/15/26</h3><p>Residents are now at Green (teaching site); La Jolla / Memorial is now non-teach. These rules took effect 12/15/26. The Daytime surge and Q&amp;A tools have updated automatically.</p></div>
+
+        <div class="sq">&#x2600;&#xFE0F; Surge</div>
+        <div class="nbox" style="margin-bottom:14px">
+          <strong>Teach site (Green) &mdash; one PM swing:</strong><br>
+          &bull; Surge call-in = 14 &times; (hospitalists on service) &minus; 5<br>
+          &bull; New ortho for the day excluded from the count; Red Team census included<br>
+          &bull; Even if the number is met, surge cannot be used unless all non-teach teams are at census &ge; 12 <strong>and</strong> all resident services are backfilled to max capacity<br><br>
+          <strong>Non-teach site (La Jolla) &mdash; two PM swings (PM1 + PM2):</strong><br>
+          &bull; Surge call-in = 14 &times; (hospitalists on service) &minus; 5<br><br>
+          <strong>Priority:</strong> non-teach site. If the teach site has very high census, daytime on-call hospitalists discuss and decide where surge is deployed.<br>
+          <strong>Both sites:</strong> lowest-complexity patients to surge; surge provider may trade patients off their list anytime; at end of shift move complex patients to the regular daytime list; clean up all team lists daily; ICU patients &rarr; ICU hold list.
+          <br><br><em>Use the <strong>Daytime surge</strong> tab to run the live calculation.</em>
+        </div>
+
+        <div class="sq">&#x1F9B4; Ortho (teach at Green)</div>
+        <div class="nbox" style="margin-bottom:14px">
+          &bull; All new ortho divided evenly across the daytime teams. None to PM, none to HS.<br>
+          &bull; OK to see patients with surgery scheduled after noon in preop &mdash; be brief and do not interrupt active OR prep.<br>
+          &bull; Red can see ortho patients if census &lt; 13.<br>
+          &bull; Teaching team sees these without house-staff (unless a good teaching case).
+        </div>
+
+        <div class="sq">&#x1F7E5; Red team (teach at Green)</div>
+        <div class="nbox" style="margin-bottom:14px">
+          &bull; Can overflow to a non-teach team if census &ge; 16.<br>
+          &bull; Can see ortho if census low.<br>
+          &bull; Census counts toward surge.<br>
+          &bull; Should not take non-BMT / non-ortho patients.
+        </div>
+
+        <div class="sq">&#x1F3E5; Non-teach at Green</div>
+        <div class="nbox" style="margin-bottom:14px">
+          &bull; Low-complexity medicine + equal share of ortho.<br>
+          &bull; Takes Red overflow when needed.
+        </div>
+
+        <div class="sq">&#x1F319; Extra PM (pilot 12/15/26 &ndash; 3/1/27)</div>
+        <div class="nbox" style="margin-bottom:14px">
+          &bull; Volunteer Mon&ndash;Fri, $2,200/shift. No pager. Hours 6p&ndash;12a.<br>
+          &bull; Max admits 5; last admit 11p.<br>
+          &bull; Cross-covers Memorial 8p&ndash;12a.<br>
+          &bull; Admits at either site but not both in one evening.<br>
+          &bull; Site chosen at 5:30p by Green PM + LJ PM2 &mdash; total admits &divide; admitters; PM capacity Green 8 / Memorial 16; shift extension still available even with Extra PM on site; tie &rarr; non-teach.<br>
+          &bull; If admitting at Green, OK to cross-cover Memorial remotely.<br>
+          &bull; Admits without residents; target simplest admits.<br>
+          &bull; Contact onsite PM / nocturnist for anything needing in-person eyes. If done for the shift, OK to finish cross-cover remotely.
+        </div>
+
+        <div class="sq">&#x1F303; Night shift at Memorial</div>
+        <div class="nbox" style="margin-bottom:14px">
+          &bull; Starts / in-house by 10pm.<br>
+          &bull; Can be asked to start admitting at 9pm if PM has more than 4 admits unseen and in-house at 9pm.<br>
+          &bull; Starts cross cover at 12am (unless asked to see a patient in person by Extra PM).
+        </div>
+
+        <div class="sq">&#x1F305; PM at Memorial</div>
+        <div class="nbox" style="margin-bottom:14px">
+          <em>2 swings, 7 days a week</em><br>
+          &bull; PM1 &mdash; on-call hours 12pm&ndash;5pm. Done by 8pm.<br>
+          &bull; PM2 &mdash; on-call hours 5pm&ndash;10pm. Out by midnight.
+        </div>
+
+        <div class="sq">&#x2600;&#xFE0F; Day shift</div>
+        <div class="nbox" style="margin-bottom:4px">
+          &bull; Base is 6 at Green (3 full teach, 1 resident-only teach, Red, non-teach).<br>
+          &bull; Base is 8 at Memorial (7 full non-teach and trauma team / Jade).<br>
+          &bull; One flex team &mdash; site is flexible based on census but will not be flexed off, at least in winter months.
+        </div>
+      </div>
+      <div class="pfoot">Reference &middot; Ops Changes &mdash; Site Switch 12/15/26</div>
+    </div>
+
+    <!-- OVERNIGHT COVERAGE — gated reference -->
+    <div class="panel" id="panel-overnight">
+      <div class="ph"><h1>Overnight coverage when the nocturnist is busy</h1><span class="badge-blue">Busy-night protocol</span></div>
+      <div class="sscroll">
+        <div class="res info" style="margin-bottom:14px"><h3>&#x1F319; Work through these options in order</h3><p>Winter night shifts can surge hard. Escalate through the options below in sequence before passing patients on.</p></div>
+
+        <div class="sq">1. Max out PM and surge PM admits</div>
+        <div class="nbox" style="margin-bottom:12px">Even if things are slow when the shift starts, use this resource to maximum capacity.</div>
+
+        <div class="sq">2. Use night float (teaching site)</div>
+        <div class="nbox" style="margin-bottom:12px">At 9pm, check with the PM and night float for open spots. Going forward, <strong>PM will be asked to leave at least 3 spots with night float for HS shift use.</strong></div>
+
+        <div class="sq">3. Stop outside transfers at capacity</div>
+        <div class="nbox" style="margin-bottom:12px">Notify the Transfer Center and house supervisor. Capacity is <strong>6 admits</strong> with no (or minimal) house-staff capacity, <strong>7 admits</strong> with house-staff capacity in-house, or <strong>4 or more on site with up to 2 patients on the way</strong>, expected within 30 minutes.</div>
+
+        <div class="sq">4. Use the other site</div>
+        <div class="nbox" style="margin-bottom:12px">If at LJ and a patient needs to come over from the Green UCC, ask the Green nocturnist to see the patient there and do the H&amp;P and orders for the LJ admit. If at LJ, ask the Green nocturnist if they have bandwidth (<strong>fewer than 5 admits so far</strong>); if so, ask the ED to send the patient to Green for admit (if appropriate).</div>
+
+        <div class="sq">5. Pass stable patients to the day team</div>
+        <div class="nbox" style="margin-bottom:12px">If the patient meets all 4 stability criteria <strong>and the admit request came at 3am or later</strong>, it is acceptable to pass them to the day team. Reserve this for nights when capacity has been exceeded; <strong>max 4 unseen</strong>.<br><br><strong>After 6am</strong>, any type of patient may be passed; patients who don't meet stability criteria stay in the ED, and the nocturnist remains responsible until 7am sign-out.</div>
+
+        <div class="sq">6. Use shift extension</div>
+        <div class="nbox" style="margin-bottom:14px">$200 per admit after the 8th at the teaching site and after the 7th at the non-teaching site (only admits count, not cross-cover).</div>
+
+        <div class="res warn" style="margin-bottom:14px"><h3>ED admit with holding orders &mdash; 4 criteria</h3><p>When the hospitalist is at capacity for the current shift, the ED may admit a patient to the floor with holding orders, before the hospitalist sees them, when all four are true:\n\n1. The patient is stable.\n2. Initial workup is complete.\n3. Treatment has been started where appropriate.\n4. ED holding orders cover the next several hours.</p></div>
+
+        <div class="sq">&#x1F4DD; Admission workflow if at capacity and called to admit</div>
+        <div class="nbox" style="margin-bottom:14px">
+          1. The ED physician calls the on-call hospitalist. Hospitalist is at capacity.<br>
+          2. The hospitalist asks: &ldquo;Is this patient stable to be on the floor and not be seen until the next shift, which is in X hours?&rdquo;<br>
+          3. <strong>Yes:</strong> the ED admits with holding orders and the patient goes to the floor. The hospitalist documents the ED physician's name, the time, the question, and the answer.<br>
+          4. <strong>No, or unsure:</strong> the patient stays in the ED until the hospitalist evaluates them or agrees they can go.
+        </div>
+
+        <div class="sq">After accepting a patient you won't see this shift</div>
+        <div class="nbox" style="margin-bottom:4px">
+          &bull; Nursing call that questions stability: evaluate in person.<br>
+          &bull; Sign out to the next shift. Attach all clinical information you received about the admission and any orders you have entered.
+        </div>
+      </div>
+      <div class="pfoot">Reference &middot; Overnight Coverage When the Nocturnist Is Busy</div>
+    </div>
+
   </div>
 </div>
 <script>
 // ── CONFIG ──
 const API_KEY = 'proxy';  // API calls go through secure server proxy
 
+// ── SITE SWITCH (resident flip: teaching moves to Green) ──
+// On this date, the teach/non-teach roles swap sites and the switch-gated
+// rules below activate automatically. To move the date, edit this one line.
+const SWITCH_DATE = new Date(2026, 11, 15);   // Dec 15, 2026 (month is 0-indexed)
+function postSwitch(d){ return (d || new Date()) >= SWITCH_DATE; }
+function teachSiteKey(){ return postSwitch() ? 'green' : 'memorial'; }   // which site is the teaching site
+function nonTeachName(){ return postSwitch() ? 'La Jolla' : 'Green'; }   // display name of the non-teach site
+
 // ── PANEL SWITCHING ──
 function show(name) {
-  ['qa','day','pm','route','edadmit','onboard','help','sched','resident','flex','vac','swap'].forEach(n => {
+  ['qa','day','pm','route','edadmit','switch','overnight','onboard','help','sched','resident','flex','vac','swap'].forEach(n => {
     document.getElementById('panel-'+n).className = 'panel'+(n===name?' active':'');
     document.getElementById('nav-'+n).className = 'nav-item'+(n===name?' active':'');
   });
@@ -1088,7 +1222,34 @@ Guidelines for when Ximed (the other hospitalist group at Scripps La Jolla) requ
 - Documentation is REQUIRED: Whenever asked to provide admission assistance, document the request in the Excel spreadsheet used to track our numbers. Record: (1) "Yes" that you were requested to help; (2) the number of admissions OUR (SCMG) group had when contacted; (3) the number of admissions the REQUESTING (Ximed) group had when contacted.
 
 AMION:
-- Website where you find which hospitalists are on for the day and where the call schedule is found.`;
+- Website where you find which hospitalists are on for the day and where the call schedule is found.
+${postSwitch() ? `
+════════════════════════════════════════════════════
+SITE SWITCH IN EFFECT (as of 12/15/26): Residents moved to GREEN. Green is now the TEACHING site; La Jolla / Memorial is now NON-TEACH. The following SUPERSEDE any conflicting statements above.
+
+SURGE (post-switch):
+- Teach site is now GREEN (one PM swing): surge call-in = 14 × hospitalists on service − 5. New ortho for the day is EXCLUDED from the count; Red Team census is INCLUDED. Surge cannot be used unless all non-teach teams are at census ≥ 12 AND all resident services are backfilled to max capacity.
+- Non-teach site is now LA JOLLA (two PM swings, PM1 + PM2): surge call-in = 14 × hospitalists on service − 5.
+- Priority is the non-teach site (La Jolla). If the teach site (Green) has very high census, daytime on-call hospitalists decide where surge is deployed.
+
+ORTHO (teach at Green): all new ortho divided evenly across the daytime teams — none to PM, none to HS. OK to see patients with surgery scheduled after noon in preop (be brief). Red can see ortho if census < 13. Teaching team sees ortho without house-staff unless a good teaching case.
+
+RED TEAM (teach at Green): can overflow to a non-teach team if census ≥ 16; can see ortho if census low; census counts toward surge; should not take non-BMT / non-ortho patients.
+
+NON-TEACH AT GREEN: low-complexity medicine + equal share of ortho; takes Red overflow when needed.
+
+EXTRA PM (pilot 12/15/26–3/1/27): volunteer Mon–Fri, $2,200/shift, no pager, hours 6pm–12am. Max 5 admits, last admit 11pm. Cross-covers Memorial 8pm–12am. Admits at either site but not both in one evening. Site chosen at 5:30pm by Green PM + LJ PM2 (total admits ÷ admitters; PM capacity Green 8 / Memorial 16; shift extension still available; tie → non-teach). If admitting at Green, OK to cross-cover Memorial remotely. Admits without residents; target simplest admits. (This replaces the earlier 8/24/26 Mon–Wed Extra PM pilot.)
+
+NIGHT SHIFT AT MEMORIAL (post-switch): in-house by 10pm; can be asked to start admitting at 9pm if PM has more than 4 admits unseen and in-house at 9pm; starts cross cover at 12am unless asked to see a patient in person by Extra PM.
+
+PM AT MEMORIAL (post-switch): 2 swings, 7 days a week. PM1 on-call 12pm–5pm, done by 8pm. PM2 on-call 5pm–10pm, out by midnight.
+
+DAY SHIFT BASE (post-switch): Green base 6 (3 full teach, 1 resident-only teach, Red, non-teach). Memorial base 8 (7 full non-teach + trauma/Jade). One flex team — site flexible by census but not flexed off in winter.
+
+OVERNIGHT COVERAGE WHEN NOCTURNIST IS BUSY (work in order): 1) Max out PM and surge PM admits. 2) Use night float at teaching site (PM leaves ≥3 spots for HS). 3) Stop outside transfers at capacity (notify Transfer Center + house sup; capacity = 6 admits with no/minimal house-staff, 7 with house-staff in-house, or ≥4 on site with up to 2 within 30 min). 4) Use the other site (ask the other nocturnist to see/admit if they have <5 admits so far). 5) Pass stable patients to day team only if all 4 stability criteria met AND request came at 3am or later (max 4 unseen; reserve for exceeded capacity); after 6am any patient may be passed, unstable stay in ED, nocturnist responsible until 7am sign-out. 6) Shift extension: $200/admit after the 8th (teach) or 7th (non-teach), admits only.
+AT-CAPACITY ED HOLDING-ORDER ADMIT — allowed only when all 4 true: patient stable; initial workup complete; treatment started where appropriate; ED holding orders cover the next several hours. Document the ED physician's name, time, the stability question asked, and the answer. If no/unsure, patient stays in ED.
+════════════════════════════════════════════════════
+` : ''}`;
 
 const qaMsgs = [];
 let qaBusy = false;
@@ -1129,10 +1290,19 @@ function opsEngine(q) {
     return "📋 Shift extension — $200 per admit after your cap:\n\n🌞 PM shift (both sites): After 8 patients\n🌙 HS night teach: After 8 patients\n🌙 HS night non-teach: After 7 patients\n🌅 Day non-teach: After 2pm if you have already seen 13+ patients\n⚡ Surge: After 10 → $200 per patient for 11, 12, 13 (voluntary, Ericka asks)\n\n📞 Contact Ericka Martin to arrange shift extension.";
 
   if (has('surge pay','standby','how much does surge','surge compensation','surge fee') || (has('$') && has('surge')))
-    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge (updated 8/3/26):\n• Call-in window: 5:00–8:00 PM, Mon–Fri\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n\n📞 Sign up via Ericka Martin.\\n\\n🆕 Extra PM (pilot 8/24/26, Mon–Wed at Memorial):\\n• PM surge volunteer converted to a scheduled Extra PM shift\\n• Hours: 5pm–12am · No pager call\\n• Max 7 admits · Last admit 11pm\\n• Pay: $2,200";
+    return "📋 Surge pay:\n\n☀️ Daytime surge:\n• Standby: $300 (paid even if not called in)\n• $1,900 weekday / $2,100 weekend\n• Expected 10 patients. Voluntary up to 13 → $200/pt for 11–13\n\n🌆 PM surge (updated 8/3/26):\n• Call-in window: 5:00–8:00 PM, Mon–Fri\n• Last admit by 9:00 PM · Shift ends 10:00 PM\n• Standby: $500\n• $250 per admit\n• Min 3, expected 4, max 5 admits\n• Called in at 7 PM or later: max 3 (unless surge agrees to more)\n\n📞 Sign up via Ericka Martin." + (postSwitch() ? "\n\n🆕 Extra PM (pilot 12/15/26–3/1/27, Mon–Fri, either site):\n• Hours: 6pm–12am · No pager · $2,200\n• Max 5 admits · Last admit 11pm\n• Cross-covers Memorial 8pm–12am\n• Site chosen 5:30pm (tie → non-teach)" : "\\n\\n🆕 Extra PM (pilot 8/24/26, Mon–Wed at Memorial):\\n• PM surge volunteer converted to a scheduled Extra PM shift\\n• Hours: 5pm–12am · No pager call\\n• Max 7 admits · Last admit 11pm\\n• Pay: $2,200");
 
   if (has('extra pm','extra shift','second pm','additional pm','8/24','monday extra','tuesday extra','wednesday extra')) {
-    return '🆕 Extra PM shift (pilot starting 8/24/26):\\n\\n' +
+    return postSwitch() ?
+      ('🆕 Extra PM shift (pilot 12/15/26–3/1/27):\n\n' +
+      'A PM surge volunteer\'s shift is converted to a scheduled Extra PM. Shows up as Extra PM on AMION; if no volunteer, PM surge rules apply.\n\n' +
+      '• Days: Monday–Friday · Hours: 6pm–12am · No pager call · $2,200/shift\n' +
+      '• Max 5 admits · Last admit 11pm\n' +
+      '• Admits at EITHER site, but not both in one evening\n' +
+      '• Site chosen at 5:30pm (Green PM + LJ PM2): total admits ÷ admitters; PM capacity Green 8 / Memorial 16; tie → non-teach\n' +
+      '• Cross-covers Memorial 8pm–12am (if admitting at Green, OK to cross-cover remotely)\n' +
+      '• Admits without residents; target simplest admits') :
+      ('🆕 Extra PM shift (pilot starting 8/24/26):\\n\\n' +
       'When a volunteer is available, PM surge is converted to Extra PM — a scheduled second PM shift at Memorial on Mon/Tue/Wed.\\n\\n' +
       '• Shows up as Extra PM on AMION. If no volunteer, PM surge rules apply as normal.\\n' +
       '• Hours: 5pm–12am · No pager call\\n' +
@@ -1142,14 +1312,14 @@ function opsEngine(q) {
       '• All work must be done by midnight\\n' +
       '• Days: Monday, Tuesday, Wednesday\\n' +
       '• Pay: $2,200\\n\\n' +
-      'PM surge continues unchanged on Thursday and Friday.';
+      'PM surge continues unchanged on Thursday and Friday.');
   }
 
   if (has('jeopardy'))
     return "📋 Jeopardy:\n\nAssigned approximately once a month. You must be available to cover day, evening, or night shifts if someone calls in sick.\n\n• You will only be called for ONE shift per day — not two shifts in the same day.\n• Check AMION for the jeopardy schedule.\n• Contact Liesbet Joris Quinton (LJQ) if you cannot work a scheduled day.";
 
   if (has('am distribution','morning distribution','distribute patient','7am','7:00') && has('distribut','assign'))
-    return "📋 AM patient distribution:\n\n• On-call hospitalist distributes all PM/HS patients to day hospitalists by 7:00 AM.\n• Update attending on each patient's list and add to treatment team.\n• Update Teams daily numbers with total census by 8am.\n• NOT expected to notify others about teaching service admissions.\n\n🦴 Ortho (Green): Karen Yegella distributes Mon–Fri. Each daytime team sees 1 new ortho patient. PM1/PM2 split remainder (max 3 each). Overflow → HS nocturnist.";
+    return "📋 AM patient distribution:\n\n• On-call hospitalist distributes all PM/HS patients to day hospitalists by 7:00 AM.\n• Update attending on each patient's list and add to treatment team.\n• Update Teams daily numbers with total census by 8am.\n• NOT expected to notify others about teaching service admissions." + (postSwitch() ? "\n\n🦴 Ortho (Green, teaching site): all new ortho divided evenly across the daytime teams — none to PM, none to HS. Red can see ortho if census < 13." : "\n\n🦴 Ortho (Green): Karen Yegella distributes Mon–Fri. Each daytime team sees 1 new ortho patient. PM1/PM2 split remainder (max 3 each). Overflow → HS nocturnist.");
 
   if (has('cross cover','crosscover')) {
     if (has('weekend swing','saturday swing','sunday swing','weekend pm','how many swing','how many pm','swing on weekend','swing saturday','swing sunday'))
@@ -1843,83 +2013,104 @@ function gV(type, title, reason, nuance) {
 
 
 // ══ DAYTIME SURGE ══
-let dS={step:0,site:null,hosp:0,census:0,date:null};
-function resetDay(){dS={step:0,site:null,hosp:0,census:0,date:null};renderDay();}
+let dS={step:0,site:null,hosp:0,census:0};
+function resetDay(){dS={step:0,site:null,hosp:0,census:0};renderDay();}
+
+// Site-, role-, and date-aware surge configuration.
+// Pre-switch: Green = Non-Teach ((h−1)×14, Red Team subtracted); La Jolla/Memorial = Teach (h×14−5 + prereqs).
+// Post-switch (12/15/26): Green = Teach (h×14−5, Red census included, new ortho excluded + prereqs); La Jolla = Non-Teach (h×14−5).
+function surgeCfg(site){
+  const post=postSwitch();
+  const cfg={site, title: site==='green'?'Scripps Green':'Scripps Memorial / La Jolla'};
+  if(site==='green' && !post){                       // pre-switch Green — NON-TEACH
+    cfg.role='Non-Teach';
+    cfg.exclude=['ICU patients (unless called out and actively followed by the hospitalist service)','Red Team patients','New orthopedic co-management patients'];
+    cfg.hint='Enter your total hospitalists including Red Team — the Red Team hospitalist (always 1) is automatically subtracted from the threshold.';
+    cfg.hospLabel='Hospitalists on service (incl. Red Team)';
+    cfg.calc=h=>{const e=h-1;return{thr:e*14, expr:`Hospitalists on service (total): ${h}\n− Red Team hospitalist: 1 (always excluded)\nEligible hospitalists: ${e}\n\nSurge threshold: ${e} × 14 = ${e*14}`};};
+    cfg.prereqs=null;
+  } else if(site==='green' && post){                 // post-switch Green — TEACH
+    cfg.role='Teach';
+    cfg.exclude=['ICU patients (unless called out and actively followed by the hospitalist service)','New orthopedic co-management patients for the day'];
+    cfg.hint='Red Team census IS included in the count. Exclude new ortho patients for the day.';
+    cfg.hospLabel='Hospitalists on service';
+    cfg.calc=h=>({thr:h*14-5, expr:`Hospitalists on service: ${h}\nTeaching-site deduction: −5  (Red Team census included; new ortho excluded)\n\nSurge threshold: ${h} × 14 − 5 = ${h*14-5}`});
+    cfg.prereqs=['All non-teaching teams have at least 12 patients','All resident services have been backfilled to maximum capacity','Scripps Memorial / La Jolla (non-teach) does NOT currently require surge'];
+    cfg.priority='Priority is the non-teach site (La Jolla). If Green (teach) has very high census, the daytime on-call hospitalists discuss and decide where surge is deployed.';
+  } else if(site==='memorial' && !post){             // pre-switch La Jolla/Memorial — TEACH
+    cfg.role='Teach';
+    cfg.exclude=['ICU patients (unless called out and actively followed by the hospitalist service)'];
+    cfg.hint=null;
+    cfg.hospLabel='Hospitalists on service';
+    cfg.calc=h=>({thr:h*14-5, expr:`Hospitalists on service: ${h}\nTeaching-site deduction: −5\n\nSurge threshold: ${h} × 14 − 5 = ${h*14-5}`});
+    cfg.prereqs=['All non-teaching teams have at least 12 patients','All resident services have been backfilled to maximum capacity','Scripps Green does NOT currently require surge'];
+  } else {                                           // post-switch La Jolla — NON-TEACH
+    cfg.role='Non-Teach';
+    cfg.exclude=['ICU patients (unless called out and actively followed by the hospitalist service)'];
+    cfg.hint=null;
+    cfg.hospLabel='Hospitalists on service';
+    cfg.calc=h=>({thr:h*14-5, expr:`Hospitalists on service: ${h}\nNon-teach deduction: −5\n\nSurge threshold: ${h} × 14 − 5 = ${h*14-5}`});
+    cfg.prereqs=null;
+  }
+  return cfg;
+}
 function renderDay(){
-  const c=document.getElementById('dc'); c.innerHTML='';
+  const c=document.getElementById('dc'); if(!c) return; c.innerHTML='';
+  const post=postSwitch();
   if(dS.step===0){
+    const gl=post?'Scripps Green (Teach)':'Scripps Green (Non-Teach)';
+    const ml=post?'Scripps Memorial / La Jolla (Non-Teach)':'Scripps Memorial / La Jolla (Teach)';
     c.innerHTML=`<p class="sq">Which site needs surge?</p><p class="sd">Select your location to begin.</p>
-    <button class="obtn" onclick="dS.site='green';dS.step=1;renderDay()">🏥 Scripps Green (Non-Teach)</button>
-    <button class="obtn" onclick="dS.site='memorial';dS.step=1;renderDay()">🏨 Scripps Memorial / La Jolla (Teach)</button>`;
+    <button class="obtn" onclick="dS.site='green';dS.step=1;renderDay()">🏥 ${gl}</button>
+    <button class="obtn" onclick="dS.site='memorial';dS.step=1;renderDay()">🏨 ${ml}</button>`;
     return;
   }
-  if(dS.step===1&&dS.site==='green'){
+  const cfg=surgeCfg(dS.site);
+  if(dS.step===1){
+    const exHtml=cfg.exclude.map(x=>'• '+x).join('<br>');
+    const hintHtml=cfg.hint?`<br><br><strong>Note:</strong> ${cfg.hint}`:'';
     c.innerHTML=`<p class="sq">Enter your numbers</p>
-    <div class="rbox"><strong>Before entering census, exclude:</strong><br>• ICU patients (unless called out and actively followed by the hospitalist service)<br>• Red Team patients<br>• New orthopedic co-management patients<br><br><strong>Note:</strong> Enter your total hospitalists including Red Team — the Red Team hospitalist (always 1) is automatically subtracted from the threshold calculation.</div>
-    <div class="nr"><label>Hospitalists on service (incl. Red Team)</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 6"></div>
-    <div class="nr"><label>Eligible census (after exclusions)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 87"></div>
-    <button class="gbtn" onclick="submitGreen()">Calculate ↗</button>`;
+    <div class="rbox"><strong>Before entering census, exclude:</strong><br>${exHtml}${hintHtml}</div>
+    <div class="nr"><label>${cfg.hospLabel}</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 7"></div>
+    <div class="nr"><label>Eligible census (after exclusions)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 97"></div>
+    <button class="gbtn" onclick="submitDay()">${cfg.prereqs?'Continue ↗':'Calculate ↗'}</button>`;
     return;
   }
-  if(dS.step===1&&dS.site==='memorial'){
-    c.innerHTML=`<p class="sq">Enter your numbers</p>
-    <div class="rbox"><strong>Before entering census, exclude:</strong><br>• ICU patients (unless called out and actively followed by the hospitalist service)</div>
-    <div class="nr"><label>Hospitalists on service</label><input type="number" id="d-hosp" min="1" placeholder="e.g. 7"></div>
-    <div class="nr"><label>Eligible census (after exclusion)</label><input type="number" id="d-cen" min="0" placeholder="e.g. 97"></div>
-    <button class="gbtn" onclick="submitMemorial()">Continue ↗</button>`;
-    return;
-  }
-  if(dS.step===2&&dS.site==='memorial'){
-    const {adj,adjLabel,threshold}=getMemAdj();
+  if(dS.step===2 && cfg.prereqs){
+    const {expr}=cfg.calc(dS.hosp);
+    const rows=cfg.prereqs.map((p,i)=>`<div class="crow"><input type="checkbox" id="c${i}"><label for="c${i}">${p}</label></div>`).join('');
     c.innerHTML=`<p class="sq">Verify prerequisites</p>
-    <p class="sd">All three must be confirmed before surge can activate at Scripps Memorial.</p>
-    <div class="mbox">Teaching-site deduction: −${adj}\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\nYour eligible census: ${dS.census}</div>
-    <div class="crow"><input type="checkbox" id="c1"><label for="c1">All non-teaching teams have at least 12 patients</label></div>
-    <div class="crow"><input type="checkbox" id="c2"><label for="c2">All resident services have been backfilled to maximum capacity</label></div>
-    <div class="crow"><input type="checkbox" id="c3"><label for="c3">Scripps Green does NOT currently require surge</label></div>
+    <p class="sd">All must be confirmed before surge can activate at ${cfg.title}.</p>
+    <div class="mbox">${expr}\nYour eligible census: ${dS.census}</div>
+    ${rows}
+    ${cfg.priority?`<div class="rbox" style="margin-top:8px">${cfg.priority}</div>`:''}
     <button class="gbtn" style="margin-top:4px" onclick="checkPrereqs()">Check eligibility ↗</button>`;
     return;
   }
   if(dS.step===3){
-    let threshold,math,can;
-    if(dS.site==='green'){
-      const eligibleHosp = dS.hosp - 1; // always subtract 1 for Red Team
-      threshold=eligibleHosp*14; can=dS.census>=threshold;
-      math=`Hospitalists on service (total): ${dS.hosp}\n− Red Team hospitalist: 1 (always excluded)\nEligible hospitalists: ${eligibleHosp}\nEligible census (excl. ICU, Red Team, new ortho): ${dS.census}\n\nSurge threshold: ${eligibleHosp} × 14 = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
-    } else {
-      const {adj}=getMemAdj(); threshold=(dS.hosp*14)-adj; can=dS.census>=threshold;
-      math=`Hospitalists on service: ${dS.hosp}\nEligible census (excl. ICU not actively followed): ${dS.census}\n\nTeaching-site deduction: −${adj}\nSurge threshold: ${dS.hosp} × 14 − ${adj} = ${threshold}\n\n${dS.census} ${can?'≥':'<'} ${threshold}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
-    }
+    const {thr,expr}=cfg.calc(dS.hosp); const can=dS.census>=thr;
+    const math=`${expr}\nEligible census: ${dS.census}\n\n${dS.census} ${can?'≥':'<'} ${thr}  →  Surge ${can?'CAN':'CANNOT'} be activated`;
+    const ntName=nonTeachName();
     c.innerHTML=`<div class="res ${can?'yes':'no'}"><h3>${can?'✓ Surge may be activated':'✗ Surge criteria not met'}</h3>
     <p>${can?'All criteria are met. Contact the surge hospitalist and prepare the patient list. Must call in before 8:00 AM.':'The eligible census does not meet the surge threshold. Continue monitoring.'}</p></div>
     <div class="mbox">${math}</div>
-    ${can?`<div class="res info"><h3>Reminders before activating</h3><p>• Assign lowest-complexity patients to surge\n• Surge max: 10 patients (13 if they voluntarily agree)\n• Surge census cannot exceed non-surge teams\n• Must call in before 8:00 AM\n• If both sites qualify, surge goes to Green (no residents)\n• Pending transfers expected by 10am CAN count toward census</p></div>`:''}
+    ${can?`<div class="res info"><h3>Reminders before activating</h3><p>• Assign lowest-complexity patients to surge\n• Surge max: 10 patients (13 if they voluntarily agree)\n• Surge census cannot exceed non-surge teams\n• Must call in before 8:00 AM\n• If both sites qualify, surge goes to ${ntName} (non-teach, no residents)\n• Pending transfers expected by 10am CAN count toward census</p></div>`:''}
     <button class="reset-btn" style="margin-top:8px" onclick="resetDay()">↺ Start over</button>`;
   }
 }
-function getMemAdj(){
-  const adj=5; // teaching-site deduction (baby caps retired)
-  return {adj,adjLabel:'teaching site',threshold:(dS.hosp*14)-adj};
-}
-function submitGreen(){
+function submitDay(){
   const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
   if(!h||!c){alert('Please fill in both fields.');return;}
-  dS.hosp=h;dS.census=c;dS.step=3;renderDay();
-}
-function submitMemorial(){
-  const h=parseInt(document.getElementById('d-hosp').value)||0,c=parseInt(document.getElementById('d-cen').value)||0;
-  if(!h||!c){alert('Please fill in all fields.');return;}
-  dS.hosp=h;dS.census=c;dS.step=2;renderDay();
+  dS.hosp=h;dS.census=c;
+  const cfg=surgeCfg(dS.site);
+  dS.step=cfg.prereqs?2:3; renderDay();
 }
 function checkPrereqs(){
-  const ok=document.getElementById('c1').checked&&document.getElementById('c2').checked&&document.getElementById('c3').checked;
-  if(!ok){
-    const m=[];
-    if(!document.getElementById('c1').checked)m.push('All non-teaching teams must have ≥ 12 patients');
-    if(!document.getElementById('c2').checked)m.push('Resident services must be backfilled to maximum capacity');
-    if(!document.getElementById('c3').checked)m.push('Scripps Green must not currently require surge');
+  const cfg=surgeCfg(dS.site); const miss=[];
+  cfg.prereqs.forEach((p,i)=>{ if(!document.getElementById('c'+i).checked) miss.push(p); });
+  if(miss.length){
     document.getElementById('dc').innerHTML=`<div class="res no"><h3>✗ Surge cannot be activated</h3>
-    <p>Prerequisites not met:\n\n${m.map(x=>'• '+x).join('\n')}\n\nIf surge is called in anyway, the difference must be made up by daytime teams.</p></div>
+    <p>Prerequisites not met:\n\n${miss.map(x=>'• '+x).join('\n')}\n\nIf surge is called in anyway, the difference must be made up by daytime teams.</p></div>
     <button class="reset-btn" style="margin-top:8px" onclick="resetDay()">↺ Start over</button>`;
     return;
   }
@@ -1937,14 +2128,17 @@ function renderPM(){
     // Day-of-week banner
     const dow = new Date().getDay(); // 0=Sun,1=Mon,2=Tue,3=Wed,4=Thu,5=Fri,6=Sat
     const dowName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][dow];
-    const isExtraPMDay = (dow >= 1 && dow <= 3);
+    const post = postSwitch();
+    const isExtraPMDay = post ? (dow >= 1 && dow <= 5) : (dow >= 1 && dow <= 3);
     const isThurFri = (dow === 4 || dow === 5);
     const isWeekend = (dow === 0 || dow === 6);
+    const extraSite = post ? 'either site (chosen at 5:30 PM)' : 'Memorial';
+    const extraDays = post ? 'Monday–Friday' : 'Monday–Wednesday';
     let extraPMWarning = '';
     if (isExtraPMDay) {
-      extraPMWarning = `<div class="res warn" style="margin-bottom:12px"><h3>&#x26A0;&#xFE0F; Check AMION for Extra PM first</h3><p>Today is <strong>${dowName}</strong>. Before calling in PM surge, check AMION to see if an <strong>Extra PM shift</strong> is already scheduled at Memorial.\n\nIf Extra PM is staffed, it handles admits from LJ PM and HS collaboratively — PM surge is not needed.\n\nOnly proceed with PM surge below if <strong>no Extra PM volunteer</strong> is showing on AMION today.</p></div>`;
-    } else if (isThurFri) {
-      extraPMWarning = `<div class="res info" style="margin-bottom:12px"><h3>&#x2139;&#xFE0F; No Extra PM today (${dowName})</h3><p>Extra PM is only available Monday–Wednesday. PM surge rules apply as normal today.</p></div>`;
+      extraPMWarning = `<div class="res warn" style="margin-bottom:12px"><h3>&#x26A0;&#xFE0F; Check AMION for Extra PM first</h3><p>Today is <strong>${dowName}</strong>. Before calling in PM surge, check AMION to see if an <strong>Extra PM shift</strong> is already scheduled at ${extraSite}.\n\nIf Extra PM is staffed, it handles admits collaboratively — PM surge is not needed.\n\nOnly proceed with PM surge below if <strong>no Extra PM volunteer</strong> is showing on AMION today.</p></div>`;
+    } else if (!post && isThurFri) {
+      extraPMWarning = `<div class="res info" style="margin-bottom:12px"><h3>&#x2139;&#xFE0F; No Extra PM today (${dowName})</h3><p>Extra PM is only available ${extraDays}. PM surge rules apply as normal today.</p></div>`;
     } else if (isWeekend) {
       extraPMWarning = `<div class="res info" style="margin-bottom:12px;background:#f5f5f3;border-color:#ccc"><h3 style="color:#555">Today is ${dowName} — no Extra PM or PM surge available</h3><p style="color:#666">PM surge and Extra PM are weekday-only. Neither is available on weekends.</p></div>`;
     }
@@ -2016,6 +2210,16 @@ function calcGreenPM(){
 
 renderGuided();
 renderDay();
+
+// Reveal the switch-gated nav tabs once the switch date has passed.
+function revealSwitchTabs(){
+  if(postSwitch()){
+    const s=document.getElementById('nav-switch'), o=document.getElementById('nav-overnight');
+    if(s) s.style.display='';
+    if(o) o.style.display='';
+  }
+}
+revealSwitchTabs();
 
 // ── FEEDBACK ──
 function submitFeedback() {
